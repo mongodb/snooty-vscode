@@ -9,28 +9,28 @@ export function activate(context: ExtensionContext) {
         .get('languageServerPath', 'snooty');
 
     const run: Executable = {
-		args: ['language-server'],
-		command: executableCommand
-	};
+        args: ['language-server'],
+        command: executableCommand
+    };
     const debug: Executable = run;
     const serverOptions: ServerOptions = {
         run: run,
         debug: debug
     };
-    
+
     // client extensions configure their server
     const clientOptions: LanguageClientOptions = {
         documentSelector: [
             { language: 'plaintext', scheme: 'file' },
-			{ language: 'yaml', scheme: 'file' },
-			{ language: 'rst', scheme: 'file' },
+            { language: 'yaml', scheme: 'file' },
+            { language: 'rst', scheme: 'file' },
         ],
         synchronize: {
             configurationSection: 'snooty',
             fileEvents: [
-				workspace.createFileSystemWatcher('**/*.rst'),
-				workspace.createFileSystemWatcher('**/*.txt'),
-				workspace.createFileSystemWatcher('**/*.yaml'),
+                workspace.createFileSystemWatcher('**/*.rst'),
+                workspace.createFileSystemWatcher('**/*.txt'),
+                workspace.createFileSystemWatcher('**/*.yaml'),
                 workspace.createFileSystemWatcher('snooty.toml')
             ]
         }
