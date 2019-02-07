@@ -12,16 +12,16 @@ export let documentEol: string;
 export let platformEol: string;
 
 /**
- * Activates the vscode.lsp-sample extension
+ * Activates the mongodb.lsp-snooty extension
  */
 export async function activate(docUri: vscode.Uri) {
 	// The extensionId is `publisher.name` from package.json
-	const ext = vscode.extensions.getExtension('vscode.lsp-sample')!;
+	const ext = vscode.extensions.getExtension('mongodb.lsp-snooty')!;
 	await ext.activate();
 	try {
 		doc = await vscode.workspace.openTextDocument(docUri);
 		editor = await vscode.window.showTextDocument(doc);
-		await sleep(2000); // Wait for server activation
+		await sleep(5000); // Wait for server activation
 	} catch (e) {
 		console.error(e);
 	}
