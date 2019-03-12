@@ -10,7 +10,7 @@
 		"url": "https://github.com/mongodb/snooty-vscode"
 	},
 	"engines": {
-		"vscode": "^1.23.0"
+		"vscode": "^1.32.0"
 	},
 	"scripts": {
 		"update-vscode": "vscode-install",

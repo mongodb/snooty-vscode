@@ -1,3 +1,5 @@
+'use strict';
+
 import { workspace, ExtensionContext } from 'vscode';
 import { ServerOptions, Executable, LanguageClient, LanguageClientOptions } from 'vscode-languageclient';
 
@@ -23,7 +25,7 @@ export function activate(context: ExtensionContext) {
         documentSelector: [
             { language: 'plaintext', scheme: 'file' },
             { language: 'yaml', scheme: 'file' },
-            { language: 'rst', scheme: 'file' },
+            { language: 'restructuredtext', scheme: 'file' },
         ],
         synchronize: {
             configurationSection: 'snooty',

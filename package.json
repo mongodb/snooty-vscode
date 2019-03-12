@@ -14,7 +14,7 @@
 		"multi-root ready"
 	],
 	"engines": {
-		"vscode": "^1.23.0"
+		"vscode": "^1.32.0"
 	},
 	"activationEvents": [
 		"workspaceContains:snooty.toml"
@@ -23,15 +23,27 @@
 	"contributes": {
 		"configuration": {
 			"type": "object",
-			"title": "Example configuration",
+			"title": "Snooty editor configuration",
 			"properties": {
-				"languageServerExample.maxNumberOfProblems": {
-					"scope": "resource",
-					"type": "number",
-					"default": 100,
-					"description": "Controls the maximum number of problems produced by the server."
+				"snooty-client.logToFile": {
+					"type": "boolean",
+					"default": false,
+					"description": "When set to true, the language server's stderr is logged to a file at workspace root level. Requires reloading extension after change."
 				},
-				"languageServerExample.trace.server": {
+				"snooty-client.languageServerPath": {
+					"type": [
+						"string",
+						"null"
+					],
+					"default": null,
+					"description": "Override the path to Snooty. Only required for Snooty developers."
+				},
+				"snooty-client.updateOnStartup": {
+					"type": "boolean",
+					"default": false,
+					"description": "Update the Snooty language server whenever the extension starts up."
+				},
+				"snooty.trace.server": {
 					"scope": "window",
 					"type": "string",
 					"enum": [
@@ -43,7 +55,34 @@
 					"description": "Traces the communication between VS Code and the language server."
 				}
 			}
-		}
+		},
+		"languages": [
+			{
+				"id": "restructuredtext",
+				"aliases": [
+				  "reStructuredText",
+				  "restructuredtext",
+				  "ReStructured Text",
+				  "reStructured Text",
+				  "RST",
+				  "ReST",
+				  "reST"
+				],
+				"extensions": [
+				  ".rst",
+				  ".rest",
+				  ".txt"
+				],
+				"configuration": "./language-configuration.json"
+			  }
+			],
+			"grammars": [
+			  {
+				"language": "restructuredtext",
+				"scopeName": "text.restructuredtext",
+				"path": "./syntaxes/restructuredtext.tmLanguage"
+			  }
+		]
 	},
 	"scripts": {
 		"vscode:prepublish": "cd client && npm run update-vscode && cd .. && npm run compile",

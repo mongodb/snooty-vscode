@@ -1,0 +1,17 @@
+restructuredtext.tmLanguage
+
+  The license terms can be found at
+
+  https://github.com/vscode-restructuredtext/vscode-restructuredtext/blob/master/LICENSE.txt
+
+restructuredtext.tmbundle
+
+  The license terms can be found at
+
+  https://github.com/textmate/restructuredtext.tmbundle
+
+Visual Studio Code
+
+  The license terms can be found at
+
+  https://github.com/Microsoft/vscode/blob/master/LICENSE.txt
