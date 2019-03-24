@@ -12,11 +12,11 @@ export let documentEol: string;
 export let platformEol: string;
 
 /**
- * Activates the mongodb.lsp-snooty extension
+ * Activates the mongodb.snooty extension
  */
 export async function activate(docUri: vscode.Uri) {
 	// The extensionId is `publisher.name` from package.json
-	const ext = vscode.extensions.getExtension('mongodb.lsp-snooty')!;
+	const ext = vscode.extensions.getExtension('i80and.snooty')!;
 	await ext.activate();
 	try {
 		doc = await vscode.workspace.openTextDocument(docUri);
@@ -32,6 +32,7 @@ async function sleep(ms: number) {
 }
 
 export const getDocPath = (p: string) => {
+	console.log(__dirname, path.resolve(__dirname, '../../testFixture', p));
 	return path.resolve(__dirname, '../../testFixture', p);
 };
 export const getDocUri = (p: string) => {

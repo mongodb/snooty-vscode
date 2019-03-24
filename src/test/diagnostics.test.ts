@@ -7,8 +7,9 @@ import * as vscode from 'vscode'
 import * as assert from 'assert'
 import { getDocUri, activate } from './helper'
 
-describe('Should get diagnostics', () => {
-  const docUri = getDocUri('diagnostics.txt')
+describe('Should get diagnostics', function() {
+  this.timeout(30000);
+  const docUri = getDocUri('source/diagnostics.txt')
 
   it('Diagnoses uppercase texts', async () => {
     await testDiagnostics(docUri, [

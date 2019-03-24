@@ -1,5 +1,5 @@
 {
-	"name": "lsp-snooty",
+	"name": "snooty",
 	"description": "A language server example",
 	"author": "MongoDB",
 	"license": "MIT",
@@ -8,7 +8,7 @@
 		"type": "git",
 		"url": "https://github.com/mongodb/snooty-vscode"
 	},
-	"publisher": "mongodb",
+	"publisher": "i80and",
 	"categories": [],
 	"keywords": [
 		"multi-root ready"
@@ -19,18 +19,21 @@
 	"activationEvents": [
 		"workspaceContains:snooty.toml"
 	],
-	"main": "./client/out/extension",
+	"main": "./out/extension",
 	"contributes": {
 		"configuration": {
 			"type": "object",
 			"title": "Snooty editor configuration",
 			"properties": {
-				"snooty-client.logToFile": {
-					"type": "boolean",
-					"default": false,
-					"description": "When set to true, the language server's stderr is logged to a file at workspace root level. Requires reloading extension after change."
+				"snooty.conflictingExtensions": {
+					"type": "array",
+					"default": [
+						"tht13.rst-vscode"
+					],
+					"description": "Extensions that might lead to conflicts.",
+					"scope": "application"
 				},
-				"snooty-client.languageServerPath": {
+				"snooty.languageServerPath": {
 					"type": [
 						"string",
 						"null"
@@ -38,7 +41,7 @@
 					"default": null,
 					"description": "Override the path to Snooty. Only required for Snooty developers."
 				},
-				"snooty-client.updateOnStartup": {
+				"snooty.updateOnStartup": {
 					"type": "boolean",
 					"default": false,
 					"description": "Update the Snooty language server whenever the extension starts up."
@@ -51,7 +54,18 @@
 						"messages",
 						"verbose"
 					],
-					"default": "off",
+					"default": "verbose",
+					"description": "Traces the communication between VS Code and the language server."
+				},
+				"snooty.trace.restructuredtext": {
+					"scope": "window",
+					"type": "string",
+					"enum": [
+						"off",
+						"messages",
+						"verbose"
+					],
+					"default": "verbose",
 					"description": "Traces the communication between VS Code and the language server."
 				}
 			}
@@ -60,41 +74,70 @@
 			{
 				"id": "restructuredtext",
 				"aliases": [
-				  "reStructuredText",
-				  "restructuredtext",
-				  "ReStructured Text",
-				  "reStructured Text",
-				  "RST",
-				  "ReST",
-				  "reST"
+					"reStructuredText",
+					"restructuredtext",
+					"ReStructured Text",
+					"reStructured Text",
+					"RST",
+					"ReST",
+					"reST"
 				],
 				"extensions": [
-				  ".rst",
-				  ".rest",
-				  ".txt"
+					".rst",
+					".rest",
+					".txt"
 				],
 				"configuration": "./language-configuration.json"
-			  }
-			],
-			"grammars": [
-			  {
+			}
+		],
+		"grammars": [
+			{
 				"language": "restructuredtext",
 				"scopeName": "text.restructuredtext",
 				"path": "./syntaxes/restructuredtext.tmLanguage"
-			  }
+			}
 		]
 	},
+	"extensionDependencies": [
+		"bungcip.better-toml"
+	],
+	"runtimeDependencies": [
+		{
+			"description": "Snooty Language Server for macOS (x64)",
+			"url": "https://github.com/mongodb/snooty-parser/releases/download/v0.1.2/snooty-0.1.2-darwin_x86_64.zip",
+			"installPath": ".snooty",
+			"platforms": [
+				"darwin"
+			],
+			"architectures": [
+				"x86_64"
+			],
+			"binaries": [
+				"./snooty/snooty"
+			],
+			"installTestPath": "./.snooty/snooty"
+		}
+	],
 	"scripts": {
-		"vscode:prepublish": "cd client && npm run update-vscode && cd .. && npm run compile",
+		"update-vscode": "vscode-install",
+		"postinstall": "vscode-install",
+		"vscode:prepublish": "npm run update-vscode && npm run compile",
 		"compile": "tsc -b",
 		"watch": "tsc -b -w",
-		"postinstall": "cd client && npm install && cd ..",
-		"test": "sh ./scripts/e2e.sh"
+		"test": "npm run compile && ./scripts/e2e.sh"
+	},
+	"dependencies": {
+		"https-proxy-agent": "^2.2.1",
+		"tmp": "^0.0.33",
+		"yauzl": "^2.10.0",
+		"mkdirp": "^0.5.1",
+		"vscode-languageclient": "^4.4.2"
 	},
 	"devDependencies": {
 		"@types/mocha": "^5.2.5",
 		"@types/node": "^8.10.39",
 		"tslint": "^5.12.1",
-		"typescript": "^3.3.3"
+		"typescript": "^3.3.3",
+		"vscode": "^1.1.32"
 	}
 }

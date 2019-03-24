@@ -5,14 +5,14 @@ import { workspace, WorkspaceConfiguration } from 'vscode';
 export class SnootyConfiguration {
 
     public get logToFile(): boolean {
-        return this.configuration.get<boolean>('snooty-client.logToFile', false);
+        return this.configuration.get<boolean>('snooty.logToFile', false);
     }
 
     /**
      * If specified, RLS will be spawned by executing a file at the given path.
      */
     public get languageServerPath(): string | null {
-        return this.configuration.get('snooty-client.languageServerPath', null);
+        return this.configuration.get('snooty.languageServerPath', null);
     }
 
     private readonly configuration: WorkspaceConfiguration;
