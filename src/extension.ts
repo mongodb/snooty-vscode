@@ -16,7 +16,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const extension = vscode.extensions.getExtension(extensionId);
     util.setExtensionPath(extension.extensionPath);
 
-    _channel = vscode.window.createOutputChannel("snooty");
+    _channel = vscode.window.createOutputChannel("Snooty");
     const logger = new Logger(text => _channel.append(text));
 
     await ensureRuntimeDependencies(extension, logger);
@@ -31,7 +31,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
         for (let p of languageServerPaths) {
             p = context.asAbsolutePath(p);
-            logger.append(p);
             if (fs.existsSync(p)) {
                 executableCommand = p;
                 break;
@@ -60,6 +59,7 @@ export async function activate(context: vscode.ExtensionContext) {
             { language: 'plaintext', scheme: 'file' },
             { language: 'yaml', scheme: 'file' },
             { language: 'restructuredtext', scheme: 'file' },
+            { language: 'toml', scheme: 'file' },
         ],
         synchronize: {
             configurationSection: 'snooty',
