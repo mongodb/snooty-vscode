@@ -7,18 +7,17 @@ import { Logger } from "./logger";
 import * as util from './common';
 import { ExtensionDownloader } from "./ExtensionDownloader";
 
+const EXTENSION_ID = 'i80and.snooty';
 let _channel: vscode.OutputChannel = null;
+let logger: Logger = null;
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
-    const extensionId = 'i80and.snooty';
-    const extension = vscode.extensions.getExtension(extensionId);
+    const extension = vscode.extensions.getExtension(EXTENSION_ID);
     util.setExtensionPath(extension.extensionPath);
-
     _channel = vscode.window.createOutputChannel("Snooty");
-    const logger = new Logger(text => _channel.append(text));
-
+    logger = new Logger(text => _channel.append(text));
     await ensureRuntimeDependencies(extension, logger);
 
     let executableCommand = vscode.workspace.getConfiguration('snooty')
@@ -73,10 +72,15 @@ export async function activate(context: vscode.ExtensionContext) {
     }
 
     const client = new LanguageClient('Snooty', serverOptions, clientOptions);
+    const restartServer = vscode.commands.registerCommand('snooty.restart', async () => {
+        await client.stop();
+        return client.start();
+    });
 
     // Push the disposable to the context's subscriptions so that the
     // client can be deactivated on extension deactivation
     context.subscriptions.push(client.start());
+    context.subscriptions.push(restartServer);
 }
 
 // this method is called when your extension is deactivated

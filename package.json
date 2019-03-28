@@ -85,6 +85,13 @@
 				"scopeName": "text.restructuredtext",
 				"path": "./syntaxes/restructuredtext.tmLanguage"
 			}
+		],
+		"commands": [
+            {
+                "command": "snooty.restart",
+                "title": "Restart Snooty",
+                "description": "Sometimes, it's just best to try turning it off and on again"
+			}
 		]
 	},
 	"extensionDependencies": [
@@ -93,7 +100,7 @@
 	"runtimeDependencies": [
 		{
 			"description": "Snooty Language Server for macOS (x64)",
-			"url": "https://github.com/mongodb/snooty-parser/releases/download/v0.1.3/snooty-0.1.3-darwin_x86_64.zip",
+			"url": "https://github.com/mongodb/snooty-parser/releases/download/v0.1.4/snooty-0.1.4-darwin_x86_64.zip",
 			"installPath": ".snooty",
 			"platforms": [
 				"darwin"
