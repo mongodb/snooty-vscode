@@ -2,6 +2,9 @@
 */**
 
 !language-configuration.json
+!LICENSE
+!THIRD_PARTY
 !syntaxes
 !out
 !node_modules
+!misc/icon.png

@@ -1,18 +1,21 @@
 {
 	"name": "snooty",
-	"description": "A language server example",
+	"description": "Snooty is a next-generation documentation authoring IDE.",
 	"author": "MongoDB",
-	"license": "MIT",
+	"license": "SEE LICENSE IN LICENSE",
 	"version": "0.0.4",
+	"icon": "misc/icon.png",
+	"galleryBanner": {
+		"color": "#FFF",
+		"theme": "light"
+	},
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/mongodb/snooty-vscode"
 	},
 	"publisher": "i80and",
-	"categories": [],
-	"keywords": [
-		"multi-root ready"
-	],
+	"categories": ["Programming Languages", "Linters"],
+	"keywords": [],
 	"engines": {
 		"vscode": "^1.32.0"
 	},
