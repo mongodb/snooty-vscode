@@ -14,7 +14,10 @@
 		"url": "https://github.com/mongodb/snooty-vscode"
 	},
 	"publisher": "i80and",
-	"categories": ["Programming Languages", "Linters"],
+	"categories": [
+		"Programming Languages",
+		"Linters"
+	],
 	"keywords": [],
 	"engines": {
 		"vscode": "^1.32.0"
@@ -22,7 +25,7 @@
 	"activationEvents": [
 		"workspaceContains:snooty.toml"
 	],
-	"main": "./out/extension",
+	"main": "./dist/extension",
 	"contributes": {
 		"configuration": {
 			"type": "object",
@@ -90,10 +93,10 @@
 			}
 		],
 		"commands": [
-            {
-                "command": "snooty.restart",
-                "title": "Restart Snooty",
-                "description": "Sometimes, it's just best to try turning it off and on again"
+			{
+				"command": "snooty.restart",
+				"title": "Restart Snooty",
+				"description": "Sometimes, it's just best to try turning it off and on again"
 			}
 		]
 	},
@@ -120,10 +123,10 @@
 	"scripts": {
 		"update-vscode": "vscode-install",
 		"postinstall": "vscode-install",
-		"vscode:prepublish": "npm run update-vscode && npm run compile",
-		"compile": "tsc -b",
-		"watch": "tsc -b -w",
-		"test": "npm run compile && ./scripts/e2e.sh"
+		"vscode:prepublish": "npm run update-vscode && webpack --mode production",
+		"compile": "webpack --mode none",
+		"watch": "webpack --mode none --watch",
+		"test": "tsc -p ./ && ./scripts/e2e.sh"
 	},
 	"dependencies": {
 		"https-proxy-agent": "^2.2.1",
@@ -135,8 +138,11 @@
 	"devDependencies": {
 		"@types/mocha": "^5.2.5",
 		"@types/node": "^8.10.39",
+		"ts-loader": "^5.3.3",
 		"tslint": "^5.12.1",
 		"typescript": "^3.3.3",
-		"vscode": "^1.1.32"
+		"vscode": "^1.1.32",
+		"webpack": "^4.29.6",
+		"webpack-cli": "^3.3.0"
 	}
 }

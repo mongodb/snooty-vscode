@@ -5,6 +5,5 @@
 !LICENSE
 !THIRD_PARTY
 !syntaxes
-!out
-!node_modules
+!dist
 !misc/icon.png
