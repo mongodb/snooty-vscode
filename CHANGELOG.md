@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Add feature to make includes, literalincludes, and figures clickable from within the text editor (DOCSP-5967).
+
 ## [v0.0.5] - 2019-05-21
 
 ### Changed
