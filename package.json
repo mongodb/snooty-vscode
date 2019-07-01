@@ -129,11 +129,14 @@
 		"test": "tsc -p ./ && ./scripts/e2e.sh"
 	},
 	"dependencies": {
+		"@types/mime": "^2.0.1",
 		"https-proxy-agent": "^2.2.1",
-		"tmp": "^0.1.0",
-		"yauzl": "^2.10.0",
+		"mime": "^2.4.4",
 		"mkdirp": "^0.5.1",
-		"vscode-languageclient": "^5.2.1"
+		"open": "^6.3.0",
+		"tmp": "^0.1.0",
+		"vscode-languageclient": "^5.2.1",
+		"yauzl": "^2.10.0"
 	},
 	"devDependencies": {
 		"@types/mocha": "^5.2.6",
