@@ -146,9 +146,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
                 return request();
             }
-            else {
-                return new vscode.Hover(null);
-            }
           }
         } ()
       );
