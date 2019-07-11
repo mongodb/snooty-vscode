@@ -10,16 +10,22 @@ import * as util from './common';
 import { ExtensionDownloader } from "./ExtensionDownloader";
 
 const EXTENSION_ID = 'i80and.snooty';
-let _channel: vscode.OutputChannel = null;
 let logger: Logger = null;
+
+let _channel: vscode.OutputChannel;
+function getOutputChannel(): vscode.OutputChannel {
+	if (!_channel) {
+		_channel = vscode.window.createOutputChannel('Snooty');
+	}
+	return _channel;
+}
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
     const extension = vscode.extensions.getExtension(EXTENSION_ID);
     util.setExtensionPath(extension.extensionPath);
-    _channel = vscode.window.createOutputChannel("Snooty");
-    logger = new Logger(text => _channel.append(text));
+    logger = new Logger(text => getOutputChannel().append(text));
     await ensureRuntimeDependencies(extension, logger);
 
     let executableCommand = vscode.workspace.getConfiguration('snooty')
@@ -152,14 +158,12 @@ export async function activate(context: vscode.ExtensionContext) {
 export function deactivate() {
 }
 
-function ensureRuntimeDependencies(extension: vscode.Extension<object>, logger: Logger): Promise<boolean> {
-    return util.installFileExists(util.InstallFileType.Lock)
-        .then(exists => {
-            if (!exists) {
-                const downloader = new ExtensionDownloader(_channel, logger, extension.packageJSON);
-                return downloader.installRuntimeDependencies();
-            } else {
-                return true;
-            }
-        });
+async function ensureRuntimeDependencies(extension: vscode.Extension<object>, logger: Logger): Promise<boolean> {
+    const exists = await util.installFileExists(util.InstallFileType.Lock);
+    if (!exists) {
+        const downloader = new ExtensionDownloader(getOutputChannel(), logger, extension.packageJSON);
+        return downloader.installRuntimeDependencies();
+    } else {
+        return true;
+    }
 }
