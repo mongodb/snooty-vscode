@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.0.8] - 2019-07-25
+
+### Changed
+
+- Upgrade to snooty-parser v0.1.12.
+
 ## [v0.0.7] - 2019-07-23
 
 ### Changed
