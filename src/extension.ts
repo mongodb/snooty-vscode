@@ -2,7 +2,7 @@
 
 import * as fs from "fs";
 import * as vscode from "vscode";
-import { ServerOptions, Executable, LanguageClient, LanguageClientOptions, RequestType, TextDocumentPositionParams, Hover } from 'vscode-languageclient';
+import { ServerOptions, Executable, LanguageClient, LanguageClientOptions, CancellationToken } from 'vscode-languageclient';
 import * as mime from "mime";
 import * as open from "open";
 import { Logger } from "./logger";
@@ -94,10 +94,10 @@ export async function activate(context: vscode.ExtensionContext) {
     let hoverFile: string;
     let clickInclude = vscode.commands.registerCommand('snooty.clickInclude', async () => {
         // Send request to server (snooty-parser)
-        let type = mime.getType(hoverFile);
+        const type = mime.getType(hoverFile);
 
         if (type == null || !type.includes("image")) {
-            let textDoc = await vscode.workspace.openTextDocument(hoverFile);
+            const textDoc = await vscode.workspace.openTextDocument(hoverFile);
             vscode.window.showTextDocument(textDoc);
         }
         else {
@@ -117,18 +117,18 @@ export async function activate(context: vscode.ExtensionContext) {
             _token: vscode.CancellationToken
           ): vscode.ProviderResult<vscode.Hover> {
             // Get range for a link
-            let wordRegex = /\/\S+/;
-            let wordRange = _document.getWordRangeAtPosition(_position, wordRegex);
+            const wordRegex = /\/\S+/;
+            const wordRange = _document.getWordRangeAtPosition(_position, wordRegex);
 
             if (wordRange != undefined) {
                 // Get text at that range
-                let word = _document.getText(wordRange);
+                const word = _document.getText(wordRange);
 
                 // Request hover information using the snooty-parser server
                 let request = async () => {
                     let contents: vscode.MarkdownString;
 
-                    await client.sendRequest("textDocument/resolve", {path: word}).then((file: string) => {
+                    await client.sendRequest("textDocument/resolve", {filename: word, docpath: _document.uri.path, resolve_type: "directive"}).then((file: string) => {
                         hoverFile = file;
                         const command = vscode.Uri.parse(`command:snooty.clickInclude`);
 
@@ -148,7 +148,12 @@ export async function activate(context: vscode.ExtensionContext) {
             }
           }
         } ()
-      );
+    );
+
+    vscode.languages.registerDocumentLinkProvider(
+        clientOptions.documentSelector, 
+        new DocumentLinkProvider(client)
+    );
 }
 
 // this method is called when your extension is deactivated
@@ -162,5 +167,69 @@ async function ensureRuntimeDependencies(extension: vscode.Extension<object>, lo
         return downloader.installRuntimeDependencies();
     } else {
         return true;
+    }
+}
+
+class DocumentLinkProvider implements vscode.DocumentLinkProvider {
+    private _client: LanguageClient;
+
+    constructor(client: LanguageClient) {
+        this._client = client;
+    }
+
+    // Provides the text document with the ranges for document links
+    provideDocumentLinks(document: vscode.TextDocument, token: CancellationToken): vscode.ProviderResult<vscode.DocumentLink[]> {
+        return this._findDocLinks(document);
+    }
+
+    // Adds the target uri to the document link
+    async resolveDocumentLink(link: vscode.DocumentLink, token: CancellationToken): Promise<vscode.DocumentLink> {
+        const document = vscode.window.activeTextEditor.document;
+        const text = document.getText(link.range);
+        link.target = await this._findTargetUri(document, text);
+        return link;
+    }
+
+    // Returns document links found within the current text document
+    private _findDocLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
+        const docText = document.getText();
+        const docRoles = docText.match(/:doc:`.+?`/gs);
+
+        if (docRoles === null) return [];
+
+        let doclinks: vscode.DocumentLink[] = [];
+        let docRoleOffsetStart = -1; // Initiated to -1 to accommodate 0th index
+
+        // For every doc role found, find their respective target
+        docRoles.forEach(async (docRole, index) => {
+            docRoleOffsetStart = docText.indexOf(docRole, docRoleOffsetStart + 1);
+
+            // Find target in doc role
+            const targetMatches = docRole.match(/((?<=<).+(?=>))|((?<=`)\S+(?!>)(?=`))/);
+            const target = targetMatches[0];
+            const targetIndex = docRole.indexOf(target);
+
+            // Get range of the target within the scope of the whole text document
+            const targetOffsetStart = docRoleOffsetStart + targetIndex;
+            const targetOffsetEnd = targetOffsetStart + target.length;
+
+            doclinks.push({
+                range: new vscode.Range(
+                    document.positionAt(targetOffsetStart), 
+                    document.positionAt(targetOffsetEnd)
+                )
+            });
+        });
+
+        return doclinks;
+    }
+
+    // Returns the full uri given a target's name
+    private async _findTargetUri(document: vscode.TextDocument, target: string): Promise<vscode.Uri> {
+        return await this._client.sendRequest(
+            "textDocument/resolve", 
+            {filename: target, docpath: document.uri.path, resolve_type: "doc"}).then((file: string) => {
+                return vscode.Uri.file(file);
+        });
     }
 }
