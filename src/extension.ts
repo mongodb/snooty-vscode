@@ -128,7 +128,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 let request = async () => {
                     let contents: vscode.MarkdownString;
 
-                    await client.sendRequest("textDocument/resolve", {filename: word, docpath: _document.uri.path, resolve_type: "directive"}).then((file: string) => {
+                    await client.sendRequest("textDocument/resolve", {fileName: word, docPath: _document.uri.path, resolveType: "directive"}).then((file: string) => {
                         hoverFile = file;
                         const command = vscode.Uri.parse(`command:snooty.clickInclude`);
 
@@ -201,11 +201,16 @@ class DocumentLinkProvider implements vscode.DocumentLinkProvider {
         let docRoleOffsetStart = -1; // Initiated to -1 to accommodate 0th index
 
         // For every doc role found, find their respective target
-        docRoles.forEach(async (docRole, index) => {
+        for (const docRole of docRoles) {
             docRoleOffsetStart = docText.indexOf(docRole, docRoleOffsetStart + 1);
 
             // Find target in doc role
-            const targetMatches = docRole.match(/((?<=<).+(?=>))|((?<=`)\S+(?!>)(?=`))/);
+            // Check if target exists in the form :doc:`text <target-name>`
+            let targetMatches = docRole.match(/(?<=<)\S+(?=>)/);
+            // If target not found, target should exist in the form :doc:`target-name`
+            if (targetMatches === null) {
+                targetMatches = docRole.match(/(?<=`)\S+(?=`)/);
+            }
             const target = targetMatches[0];
             const targetIndex = docRole.indexOf(target);
 
@@ -219,7 +224,7 @@ class DocumentLinkProvider implements vscode.DocumentLinkProvider {
                     document.positionAt(targetOffsetEnd)
                 )
             });
-        });
+        }
 
         return doclinks;
     }
@@ -228,7 +233,7 @@ class DocumentLinkProvider implements vscode.DocumentLinkProvider {
     private async _findTargetUri(document: vscode.TextDocument, target: string): Promise<vscode.Uri> {
         return await this._client.sendRequest(
             "textDocument/resolve", 
-            {filename: target, docpath: document.uri.path, resolve_type: "doc"}).then((file: string) => {
+            {fileName: target, docPath: document.uri.path, resolveType: "doc"}).then((file: string) => {
                 return vscode.Uri.file(file);
         });
     }
