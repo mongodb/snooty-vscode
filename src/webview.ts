@@ -1,14 +1,45 @@
 import * as vscode from "vscode";
+import * as path from "path";
+
+export function startWebview(context: vscode.ExtensionContext) {
+  // Create panel
+  const panel = vscode.window.createWebviewPanel(
+    "snootyPreview",
+    "Snooty Preview",
+    vscode.ViewColumn.Beside,
+    {
+      enableScripts: true,
+      retainContextWhenHidden: true
+    }
+  ); // Set up resource files needed for page to render (bundle and css) // If file does not exist, panel will show empty content // Paths of bundle and css files may change after snooty frontend submodule works
+
+  const bundlePath = path.join(
+    context.extensionPath,
+    "snooty-preview/preview",
+    "bundle.js"
+  );
+  const bundleFile = getResource(bundlePath); // TODO: Add validation through parser to see which css file to use. // For testing purposes, only support guides until we get communication between extension and frontend working
+  const cssPath = path.join(
+    context.extensionPath,
+    "snooty-preview/static/docs-tools",
+    "guides.css"
+  );
+  const cssFile = getResource(cssPath); // Assign html content to webview panel
+  panel.webview.html = getWebviewContent(bundleFile, cssFile);
+}
 
 // Takes a path to a file and converts it to a secure resource for webview
-export function getResource(path: string) {
-	const fileUri = vscode.Uri.file(path);
-	return fileUri.with({scheme: 'vscode-resource'});
+function getResource(path: string): vscode.Uri {
+  const fileUri = vscode.Uri.file(path);
+  return fileUri.with({ scheme: "vscode-resource" });
 }
 
 // Returns html template used to render preview
-export function getWebviewContent(bundleScript: vscode.Uri, css: vscode.Uri): string {
-	return `
+function getWebviewContent(
+  bundleScript: vscode.Uri,
+  css: vscode.Uri
+): string {
+  return `
 	<!DOCTYPE html>
 	<html lang="en">
 	<head>

@@ -5,11 +5,10 @@ import * as vscode from "vscode";
 import { ServerOptions, Executable, LanguageClient, LanguageClientOptions, CancellationToken } from 'vscode-languageclient';
 import * as mime from "mime";
 import * as open from "open";
-import * as path from 'path';
 import { Logger } from "./logger";
 import * as util from './common';
 import { ExtensionDownloader } from "./ExtensionDownloader";
-import { getResource, getWebviewContent } from "./webview";
+import { startWebview } from "./webview";
 
 const EXTENSION_ID = 'i80and.snooty';
 let logger: Logger = null;
@@ -131,33 +130,7 @@ export async function activate(context: vscode.ExtensionContext) {
     // TODO: Make client request to textDocument/get_page_ast
     // Snooty Preview command to open webview panel and display content of page AST
     const snootyPreview: vscode.Disposable = vscode.commands.registerCommand('snooty.snootyPreview', async () => {
-        // Create panel
-        const panel = vscode.window.createWebviewPanel(
-            'snootyPreview', 
-            'Snooty Preview', 
-            vscode.ViewColumn.Beside,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
-
-        // Set up resource files needed for page to render (bundle and css)
-        // If file does not exist, panel will show empty content
-        // Paths of bundle and css files may change after snooty frontend submodule works
-        const bundlePath = path.join(
-            context.extensionPath, 'preview', 'bundle.js'
-        );
-        const bundleFile = getResource(bundlePath);
-        // TODO: Add validation through parser to see which css file to use. 
-        // For testing purposes, only support guides until we get communication between extension and frontend working
-        const cssPath = path.join(
-            context.extensionPath, 'preview', 'docs-tools', 'themes', 'mongodb', 'static', 'guides.css'
-        );
-        const cssFile = getResource(cssPath);
-
-        // Assign html content to webview panel
-        panel.webview.html = getWebviewContent(bundleFile, cssFile);
+        startWebview(context);
     });
     context.subscriptions.push(snootyPreview);
 
