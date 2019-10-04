@@ -5,9 +5,11 @@ import * as vscode from "vscode";
 import { ServerOptions, Executable, LanguageClient, LanguageClientOptions, CancellationToken } from 'vscode-languageclient';
 import * as mime from "mime";
 import * as open from "open";
+import * as path from 'path';
 import { Logger } from "./logger";
 import * as util from './common';
 import { ExtensionDownloader } from "./ExtensionDownloader";
+import { startWebview } from "./webview";
 
 const EXTENSION_ID = 'i80and.snooty';
 let logger: Logger = null;
@@ -92,7 +94,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Register custom command to allow includes, literalincludes, and figures to be clickable
     let hoverFile: string;
-    let clickInclude = vscode.commands.registerCommand('snooty.clickInclude', async () => {
+    const clickInclude: vscode.Disposable = vscode.commands.registerCommand('snooty.clickInclude', async () => {
         // Send request to server (snooty-parser)
         const type = mime.getType(hoverFile);
 
@@ -110,20 +112,42 @@ export async function activate(context: vscode.ExtensionContext) {
     const getPageAST: vscode.Disposable = vscode.commands.registerCommand('snooty.getPageAST', async () => {
         const textDocument: vscode.TextDocument = vscode.window.activeTextEditor.document;
         const fileName: string = textDocument.fileName;
-        
-        // Only valid on .txt site pages
+
+        // Only valid on .txt site pages for now
         if (!fileName.endsWith(".txt")) {
             const errorMsg = "ERROR: This command can only be performed on .txt files."
             vscode.window.showErrorMessage(errorMsg);
         }
         else {
             await client.sendRequest("textDocument/get_page_ast", {filePath: fileName}).then((ast: any) => {
-                console.log(ast);
+                // Save page AST as a file
+                const astFilePath = path.resolve(
+                    extension.extensionPath, 
+                    'snooty-frontend/preview',
+                    'page-ast.json'
+                );
+                fs.writeFile(astFilePath, JSON.stringify(ast), (err) => {
+                    if (err) throw err;
+                });
             });
         }
     });
-
     context.subscriptions.push(getPageAST);
+
+    // Create task for Snooty Preview
+    const previewBundleTask: vscode.Task = createPreviewBundleTask(context);
+    vscode.tasks.onDidEndTask((e) => {
+        if (e.execution.task === previewBundleTask) {
+            startWebview(context);
+        }
+    });
+
+    // Snooty Preview command to open webview panel and display content of page AST
+    const snootyPreview: vscode.Disposable = vscode.commands.registerCommand('snooty.snootyPreview', async () => {
+        await vscode.commands.executeCommand('snooty.getPageAST');
+        await vscode.tasks.executeTask(previewBundleTask);
+    });
+    context.subscriptions.push(snootyPreview);
 
     // Shows clickable link to file after hovering over it
     vscode.languages.registerHoverProvider(
@@ -255,4 +279,25 @@ class DocumentLinkProvider implements vscode.DocumentLinkProvider {
                 return vscode.Uri.file(file);
         });
     }
+}
+
+// Create task to run webpack on snooty frontend via npm run preview
+function createPreviewBundleTask(context: vscode.ExtensionContext): vscode.Task {
+    const task: vscode.Task = new vscode.Task(
+        {type: 'previewProvider'},
+        vscode.TaskScope.Workspace,
+        "Snooty Preview: Webpack Bundle",
+        "snooty"
+    );
+    // For testing purposes, we want to see the terminal output
+    task.presentationOptions = {
+        reveal: vscode.TaskRevealKind.Always,
+        panel: vscode.TaskPanelKind.New
+    };
+    task.execution = new vscode.ShellExecution(
+        `npm run preview`,
+        { cwd: context.extensionPath }
+    );
+
+    return task;
 }
