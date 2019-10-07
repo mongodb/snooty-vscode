@@ -1,4 +1,0 @@
-[submodule "snooty-frontend"]
-	path = snooty-frontend
-	url = https://github.com/mongodb/snooty
-	branch = master
