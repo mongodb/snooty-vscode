@@ -117,8 +117,7 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.window.showErrorMessage(errorMsg);
         }
         else {
-            const fileText: string = textDocument.getText();
-            await client.sendRequest("textDocument/get_page_ast", {filePath: fileName, fileText: fileText}).then((ast: any) => {
+            await client.sendRequest("textDocument/get_page_ast", {filePath: fileName}).then((ast: any) => {
                 console.log(ast);
             });
         }
