@@ -94,4 +94,4 @@ function getWebviewContent(bundleScript: vscode.Uri, css: vscode.Uri): string {
 						<script src="${bundleScript}"></script>
 				</body>
 				</html>`;
-} 
+}
