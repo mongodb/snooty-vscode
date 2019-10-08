@@ -104,8 +104,26 @@ export async function activate(context: vscode.ExtensionContext) {
             open(hoverFile);
         }
     });
-
     context.subscriptions.push(clickInclude);
+
+    // Command for getting page ast
+    const getPageAST: vscode.Disposable = vscode.commands.registerCommand('snooty.getPageAST', async () => {
+        const textDocument: vscode.TextDocument = vscode.window.activeTextEditor.document;
+        const fileName: string = textDocument.fileName;
+        
+        // Only valid on .txt site pages
+        if (!fileName.endsWith(".txt")) {
+            const errorMsg = "ERROR: This command can only be performed on .txt files."
+            vscode.window.showErrorMessage(errorMsg);
+        }
+        else {
+            await client.sendRequest("textDocument/get_page_ast", {filePath: fileName}).then((ast: any) => {
+                console.log(ast);
+            });
+        }
+    });
+
+    context.subscriptions.push(getPageAST);
 
     // Shows clickable link to file after hovering over it
     vscode.languages.registerHoverProvider(
