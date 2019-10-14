@@ -1,11 +1,13 @@
 import * as vscode from "vscode";
 import * as path from 'path';
 
-export function startWebview(context: vscode.ExtensionContext) {
+export function startWebview(context: vscode.ExtensionContext, projectName: string, previewPage: string) {
+		// Choose template. Guarantees the correct fonts are loaded in as well
+		const template = projectName === 'guides' ? 'guides.css' : 'mongodb-docs.css';
 		// Create panel
 		const panel = vscode.window.createWebviewPanel(
 				'snootyPreview', 
-				'Snooty Preview',
+				`Snooty Preview - ${previewPage}`,
 				{
 					preserveFocus: true,
 					viewColumn: vscode.ViewColumn.Beside
@@ -18,7 +20,6 @@ export function startWebview(context: vscode.ExtensionContext) {
 
 		// Set up resource files needed for page to render (bundle and css)
 		// If file does not exist, panel will show empty content
-		// Paths of bundle and css files may change after snooty frontend submodule works
 		const bundlePath = path.join(
 				context.extensionPath, 
 				'snooty-frontend/preview',
@@ -30,7 +31,7 @@ export function startWebview(context: vscode.ExtensionContext) {
 		const cssPath = path.join(
 				context.extensionPath, 
 				'snooty-frontend/static/docs-tools',
-				'guides.css'
+				template
 		);
 		const cssFile = getResource(cssPath);
 		
