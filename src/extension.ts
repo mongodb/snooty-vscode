@@ -9,7 +9,7 @@ import * as path from 'path';
 import { Logger } from "./logger";
 import * as util from './common';
 import { ExtensionDownloader } from "./ExtensionDownloader";
-import { startWebview } from "./webview";
+import { registerSnootyPreview } from "./preview";
 
 const EXTENSION_ID = 'i80and.snooty';
 let logger: Logger = null;
@@ -134,37 +134,7 @@ export async function activate(context: vscode.ExtensionContext) {
     });
     context.subscriptions.push(getPageAST);
 
-    // Get the project name found in the repo's snooty.toml
-    const getProjectName: vscode.Disposable = vscode.commands.registerCommand('snooty.getProjectName', async () => {
-        return await client.sendRequest("textDocument/get_project_name", {});
-    });
-    context.subscriptions.push(getProjectName);
-
-    // Get the file id of the file currently using Snooty Preview
-    const getPageFileId: vscode.Disposable = vscode.commands.registerCommand('snooty.getPageFileId', async () => {
-        const textDocument: vscode.TextDocument = vscode.window.activeTextEditor.document;
-        const fileName: string = textDocument.fileName;
-        return await client.sendRequest("textDocument/get_page_fileid", {filePath: fileName});
-    });
-    context.subscriptions.push(getPageFileId);
-
-    // Snooty Preview command to open webview panel and display content of page AST
-    const snootyPreview: vscode.Disposable = vscode.commands.registerCommand('snooty.snootyPreview', async () => {
-        const projectName: string = await vscode.commands.executeCommand('snooty.getProjectName');
-        const previewPage: string = await vscode.commands.executeCommand('snooty.getPageFileId');
-
-        // Create task for Snooty Preview
-        const previewBundleTask: vscode.Task = createPreviewBundleTask(context, previewPage, projectName);
-        vscode.tasks.onDidEndTask((e) => {
-            if (e.execution.task === previewBundleTask) {
-                startWebview(context, projectName, previewPage);
-            }
-        });
-
-        await vscode.commands.executeCommand('snooty.getPageAST');
-        await vscode.tasks.executeTask(previewBundleTask);
-    });
-    context.subscriptions.push(snootyPreview);
+    registerSnootyPreview(client, context);
 
     // Shows clickable link to file after hovering over it
     vscode.languages.registerHoverProvider(
@@ -296,28 +266,4 @@ class DocumentLinkProvider implements vscode.DocumentLinkProvider {
                 return vscode.Uri.file(file);
         });
     }
-}
-
-// Create task to run webpack on snooty frontend via npm run preview
-function createPreviewBundleTask(context: vscode.ExtensionContext, previewPage: string, projectName: string): vscode.Task {
-    const envPreviewPage = `--env.PREVIEW_PAGE='${previewPage}'`;
-    const envProjectName = `--env.PROJECT_NAME='${projectName}'`;
-    const task: vscode.Task = new vscode.Task(
-        {type: 'previewProvider'},
-        vscode.TaskScope.Workspace,
-        "Snooty Preview: Webpack Bundle",
-        "snooty"
-    );
-
-    // For testing purposes, we want to see the terminal output
-    task.presentationOptions = {
-        reveal: vscode.TaskRevealKind.Always,
-        panel: vscode.TaskPanelKind.New
-    };
-    task.execution = new vscode.ShellExecution(
-        `npm run preview -- ${envPreviewPage} ${envProjectName}`,
-        { cwd: context.extensionPath }
-    );
-
-    return task;
 }
