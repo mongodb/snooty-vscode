@@ -9,7 +9,7 @@ import * as path from 'path';
 import { Logger } from "./logger";
 import * as util from './common';
 import { ExtensionDownloader } from "./ExtensionDownloader";
-import { startWebview } from "./webview";
+import { registerSnootyPreview } from "./preview";
 
 const EXTENSION_ID = 'i80and.snooty';
 let logger: Logger = null;
@@ -134,20 +134,7 @@ export async function activate(context: vscode.ExtensionContext) {
     });
     context.subscriptions.push(getPageAST);
 
-    // Create task for Snooty Preview
-    const previewBundleTask: vscode.Task = createPreviewBundleTask(context);
-    vscode.tasks.onDidEndTask((e) => {
-        if (e.execution.task === previewBundleTask) {
-            startWebview(context);
-        }
-    });
-
-    // Snooty Preview command to open webview panel and display content of page AST
-    const snootyPreview: vscode.Disposable = vscode.commands.registerCommand('snooty.snootyPreview', async () => {
-        await vscode.commands.executeCommand('snooty.getPageAST');
-        await vscode.tasks.executeTask(previewBundleTask);
-    });
-    context.subscriptions.push(snootyPreview);
+    registerSnootyPreview(client, context);
 
     // Shows clickable link to file after hovering over it
     vscode.languages.registerHoverProvider(
@@ -279,25 +266,4 @@ class DocumentLinkProvider implements vscode.DocumentLinkProvider {
                 return vscode.Uri.file(file);
         });
     }
-}
-
-// Create task to run webpack on snooty frontend via npm run preview
-function createPreviewBundleTask(context: vscode.ExtensionContext): vscode.Task {
-    const task: vscode.Task = new vscode.Task(
-        {type: 'previewProvider'},
-        vscode.TaskScope.Workspace,
-        "Snooty Preview: Webpack Bundle",
-        "snooty"
-    );
-    // For testing purposes, we want to see the terminal output
-    task.presentationOptions = {
-        reveal: vscode.TaskRevealKind.Always,
-        panel: vscode.TaskPanelKind.New
-    };
-    task.execution = new vscode.ShellExecution(
-        `npm run preview`,
-        { cwd: context.extensionPath }
-    );
-
-    return task;
 }
