@@ -11,7 +11,7 @@ export function startWebview(
   // Create panel
   const panel = vscode.window.createWebviewPanel(
     "snootyPreview",
-    `Snooty Preview - ${previewPage}`,
+    `Snooty Preview: ${previewPage}`,
     {
       preserveFocus: true,
       viewColumn: vscode.ViewColumn.Beside

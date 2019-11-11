@@ -62,7 +62,7 @@ function createPreviewBundleTask(
   const task: vscode.Task = new vscode.Task(
     { type: "previewProvider" },
     vscode.TaskScope.Workspace,
-    "Snooty Preview: Webpack Bundle",
+    "Snooty Preview: Create Webpack Bundle",
     "snooty"
   );
 

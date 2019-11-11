@@ -137,7 +137,7 @@
 		"compile": "webpack --mode none",
 		"watch": "webpack --mode none --watch",
 		"test": "tsc -p ./ && ./scripts/e2e.sh",
-		"preview": "./snooty-frontend/node_modules/.bin/webpack --config ./snooty-frontend/webpack.config.js"
+		"preview": "./snooty-frontend/node_modules/.bin/webpack --config ./snooty-frontend/webpack.config.js --env.PREVIEW_MODE='vscode'"
 	},
 	"dependencies": {
 		"@types/mime": "^2.0.1",
