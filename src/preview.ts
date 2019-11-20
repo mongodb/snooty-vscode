@@ -16,9 +16,7 @@ export function registerSnootyPreview(
     "snooty.snootyPreview",
     async () => {
       const projectName: string = await getProjectName(client);
-      console.log(projectName);
       const previewPage: string = await getPageFileId(client);
-      console.log(previewPage);
 
       // Create task for Snooty Preview
       const previewBundleTask: vscode.Task = createPreviewBundleTask(
@@ -78,7 +76,6 @@ async function getPageAST(
           "snooty-frontend/preview",
           "page-ast.json"
         );
-        console.log(ast);
         fs.writeFile(astFilePath, JSON.stringify(ast), err => {
           if (err) throw err;
         });
