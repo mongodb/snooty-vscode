@@ -108,33 +108,8 @@ export async function activate(context: vscode.ExtensionContext) {
     });
     context.subscriptions.push(clickInclude);
 
-    // Command for getting page ast
-    const getPageAST: vscode.Disposable = vscode.commands.registerCommand('snooty.getPageAST', async () => {
-        const textDocument: vscode.TextDocument = vscode.window.activeTextEditor.document;
-        const fileName: string = textDocument.fileName;
-
-        // Only valid on .txt site pages for now
-        if (!fileName.endsWith(".txt")) {
-            const errorMsg = "ERROR: This command can only be performed on .txt files."
-            vscode.window.showErrorMessage(errorMsg);
-        }
-        else {
-            await client.sendRequest("textDocument/get_page_ast", {filePath: fileName}).then((ast: any) => {
-                // Save page AST as a file
-                const astFilePath = path.resolve(
-                    extension.extensionPath, 
-                    'snooty-frontend/preview',
-                    'page-ast.json'
-                );
-                fs.writeFile(astFilePath, JSON.stringify(ast), (err) => {
-                    if (err) throw err;
-                });
-            });
-        }
-    });
-    context.subscriptions.push(getPageAST);
-
-    registerSnootyPreview(client, context);
+    // Register Snooty Preview as a valid command to run
+    registerSnootyPreview(client, context, extension);
 
     // Shows clickable link to file after hovering over it
     vscode.languages.registerHoverProvider(

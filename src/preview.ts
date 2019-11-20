@@ -1,19 +1,24 @@
 /* This file contains functions relevant for Snooty Preview */
 
 import * as vscode from "vscode";
+import * as path from "path";
+import * as fs from "fs";
 import { LanguageClient } from "vscode-languageclient";
 import { startWebview } from "./webview";
 
 // Registers Snooty Preview as a usable command
 export function registerSnootyPreview(
   client: LanguageClient,
-  context: vscode.ExtensionContext
+  context: vscode.ExtensionContext,
+  extension: vscode.Extension<any>
 ): void {
   const snootyPreview: vscode.Disposable = vscode.commands.registerCommand(
     "snooty.snootyPreview",
     async () => {
       const projectName: string = await getProjectName(client);
+      console.log(projectName);
       const previewPage: string = await getPageFileId(client);
+      console.log(previewPage);
 
       // Create task for Snooty Preview
       const previewBundleTask: vscode.Task = createPreviewBundleTask(
@@ -22,14 +27,16 @@ export function registerSnootyPreview(
         projectName
       );
       vscode.tasks.onDidEndTask(e => {
-        6;
         if (e.execution.task === previewBundleTask) {
           startWebview(context, projectName, previewPage);
         }
       });
 
-      await vscode.commands.executeCommand("snooty.getPageAST");
-      await vscode.tasks.executeTask(previewBundleTask);
+      // Snooty Preview task should really only run if valid ast is received
+      const getPageASTStatus = await getPageAST(client, extension);
+      if (!getPageASTStatus) {
+        await vscode.tasks.executeTask(previewBundleTask);
+      }
     }
   );
 
@@ -49,6 +56,42 @@ async function getPageFileId(client: LanguageClient): Promise<string> {
   return await client.sendRequest("textDocument/get_page_fileid", {
     filePath: fileName
   });
+}
+
+// Writes the AST of a page into a json file located in snooty-frontend
+// Returns 0 on success, 1 on failure (i.e. an unsupported file)
+async function getPageAST(
+  client: LanguageClient,
+  extension: vscode.Extension<any>
+): Promise<Number> {
+  const textDocument: vscode.TextDocument =
+    vscode.window.activeTextEditor.document;
+  const fileName: string = textDocument.fileName;
+
+  if (fileName.endsWith(".txt") || fileName.endsWith(".rst")) {
+    await client
+      .sendRequest("textDocument/get_page_ast", { fileName })
+      .then((ast: any) => {
+        // Save page AST as a file
+        const astFilePath = path.resolve(
+          extension.extensionPath,
+          "snooty-frontend/preview",
+          "page-ast.json"
+        );
+        console.log(ast);
+        fs.writeFile(astFilePath, JSON.stringify(ast), err => {
+          if (err) throw err;
+        });
+      });
+
+    return 0;
+  }
+
+  // Return status 1 if Snooty Preview should not work (i.e. previewing a yaml file)
+  const errorMsg =
+    "ERROR: Snooty Preview command does not support this file type.";
+  vscode.window.showErrorMessage(errorMsg);
+  return 1;
 }
 
 // Create task to run webpack on snooty frontend via npm run preview
