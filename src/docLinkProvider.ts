@@ -2,6 +2,12 @@ import * as vscode from "vscode";
 import { LanguageClient, CancellationToken } from "vscode-languageclient";
 
 export class DocumentLinkProvider implements vscode.DocumentLinkProvider {
+  /**
+   * Handles creation of document links (https://code.visualstudio.com/api/references/vscode-api#DocumentLink)
+   * for doc roles. Clicking on the target of a document link allows the user to open a text editor with its
+   * corresponding file.
+   */
+
   private _client: LanguageClient;
 
   constructor(client: LanguageClient) {

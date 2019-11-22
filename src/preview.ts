@@ -66,7 +66,7 @@ async function getPageAST(
     vscode.window.activeTextEditor.document;
   const fileName: string = textDocument.fileName;
 
-  if (fileName.endsWith(".txt") || fileName.endsWith(".rst")) {
+  if (hasValidExtension(fileName)) {
     await client
       .sendRequest("textDocument/get_page_ast", { fileName })
       .then((ast: any) => {
@@ -89,6 +89,12 @@ async function getPageAST(
     "ERROR: Snooty Preview command does not support this file type.";
   vscode.window.showErrorMessage(errorMsg);
   return 1;
+}
+
+// Checks fileName if it ends with an extension valid for Snooty Preview
+function hasValidExtension(fileName: string) {
+  const extensions = [".txt", ".rst"];
+  return extensions.some(ext => fileName.endsWith(ext));
 }
 
 // Create task to run webpack on snooty frontend via npm run preview
