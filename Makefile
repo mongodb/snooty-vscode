@@ -6,4 +6,4 @@ frontend:
 	git submodule update
 	touch ${FRONTEND_DIR}/${ENV_PROD}
 	cd ${FRONTEND_DIR} && ${MAKE} static
-	cd ${FRONTEND_DIR} && npm install
+	cd ${FRONTEND_DIR} && npm install --only=production

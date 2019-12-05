@@ -3,7 +3,7 @@
 	"description": "Snooty is a next-generation documentation authoring IDE.",
 	"author": "MongoDB",
 	"license": "SEE LICENSE IN LICENSE",
-	"version": "0.0.8",
+	"version": "0.0.9",
 	"icon": "misc/icon.png",
 	"galleryBanner": {
 		"color": "#FFF",
@@ -116,10 +116,25 @@
 	"runtimeDependencies": [
 		{
 			"description": "Snooty Language Server for macOS (x64)",
-			"url": "https://github.com/mongodb/snooty-parser/releases/download/v0.1.12/snooty-0.1.12-darwin_x86_64.zip",
+			"url": "https://github.com/mongodb/snooty-parser/releases/download/v0.1.15/snooty-v0.1.15-darwin_x86_64.zip",
 			"installPath": ".snooty",
 			"platforms": [
 				"darwin"
+			],
+			"architectures": [
+				"x86_64"
+			],
+			"binaries": [
+				"./snooty/snooty"
+			],
+			"installTestPath": "./.snooty/snooty"
+		},
+		{
+			"description": "Snooty Language Server for linux (x64)",
+			"url": "https://github.com/mongodb/snooty-parser/releases/download/v0.1.15/snooty-v0.1.15-linux_x86_64.zip",
+			"installPath": ".snooty",
+			"platforms": [
+				"linux"
 			],
 			"architectures": [
 				"x86_64"
@@ -133,7 +148,7 @@
 	"scripts": {
 		"update-vscode": "vscode-install",
 		"postinstall": "vscode-install",
-		"vscode:prepublish": "npm run update-vscode && webpack --mode production",
+		"vscode:prepublish": "export NODE_ENV=production && make frontend && npm run update-vscode && webpack --mode production",
 		"compile": "webpack --mode none",
 		"watch": "webpack --mode none --watch",
 		"test": "tsc -p ./ && ./scripts/e2e.sh",
