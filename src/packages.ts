@@ -4,26 +4,26 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fs from 'fs';
+import { promisify }  from 'util';
 import * as https from 'https';
 import * as mkdirp from 'mkdirp';
 import * as path from 'path';
-import * as tmp from 'tmp';
+import * as tmp from 'tmp-promise';
 import { parse as parseUrl } from 'url';
-import * as yauzl from 'yauzl';
+import * as yauzl from 'yauzl-promise';
 import * as util from './common';
 import { Logger } from './logger';
 import { PlatformInformation } from './platform';
 import { getProxyAgent } from './proxy';
 
+// Unix User Executable bitmask
+const S_IXUSR = 0o0100;
+
 export interface Package {
     description: string;
-    url: string;
-    fallbackUrl?: string;
     installPath?: string;
-    platforms: string[];
-    architectures: string[];
-    binaries: string[];
-    tmpFile: tmp.SynchrounousResult;
+    platforms: Record<string, string>;
+    tmpFile: tmp.FileResult;
 
     // Path to use to test if the package has already been installed
     installTestPath?: string;
@@ -36,76 +36,68 @@ export interface Status {
 
 export class PackageError extends Error {
     // Do not put PII (personally identifiable information) in the 'message' field as it will be logged to telemetry
-    constructor(public message: string, 
-                public pkg: Package = null, 
-                public innerError: any = null) {
+    constructor(public message: string,
+                public pkg?: Package,
+                public innerError?: Error) {
         super(message);
     }
 }
 
 export class PackageManager {
-    private allPackages: Package[];
+    private allPackages: Package[] = []
 
     public constructor(
         private platformInfo: PlatformInformation,
         private packageJSON: any) {
 
+        this.allPackages = <Package[]>this.packageJSON.runtimeDependencies;
+
         // Ensure our temp files get cleaned up in case of error.
         tmp.setGracefulCleanup();
     }
 
-    public DownloadPackages(logger: Logger, status: Status, proxy: string, strictSSL: boolean): Promise<void> {
-        return this.GetPackages()
-            .then(packages => {
-                return util.buildPromiseChain(packages, pkg => maybeDownloadPackage(pkg, logger, status, proxy, strictSSL));
-            });
+    public async DownloadPackages(logger: Logger, status: Status, proxy?: string): Promise<void> {
+        const packages = this.allPackages;
+        logger.appendLine(`packages: ${JSON.stringify(packages, null, 2)}`);
+        for (const pkg of packages) {
+            logger.appendLine(`packageTestPathExists: ${await getPackageTestPath(pkg)}`);
+            const exists = await doesPackageTestPathExist(pkg);
+            logger.appendLine(`exists: ${exists}`)
+            if (!exists) {
+                return this.downloadPackage(pkg, logger, status, proxy);
+            } else {
+                logger.appendLine(`Skipping package '${pkg.description}' (already downloaded).`);
+            }
+        }
     }
 
-    public InstallPackages(logger: Logger, status: Status): Promise<void> {
-        return this.GetPackages()
-            .then(packages => {
-                return util.buildPromiseChain(packages, pkg => installPackage(pkg, logger, status));
-            });
+    public async InstallPackages(logger: Logger, status: Status): Promise<void> {
+        for (const pkg of this.allPackages) {
+            await installPackage(pkg, logger, status);
+        }
     }
 
-    private GetAllPackages(): Promise<Package[]> {
-        return new Promise<Package[]>((resolve, reject) => {
-            if (this.allPackages) {
-                resolve(this.allPackages);
-            }
-            else if (this.packageJSON.runtimeDependencies) {
-                this.allPackages = <Package[]>this.packageJSON.runtimeDependencies;
+    private async downloadPackage(pkg: Package, logger: Logger, status: Status, proxy?: string): Promise<void> {
+        const platformKey = [this.platformInfo.architecture, this.platformInfo.platform].join(" ");
+        const url = pkg.platforms[platformKey];
 
-                // Convert relative binary paths to absolute
-                for (let pkg of this.allPackages) {
-                    if (pkg.binaries) {
-                        pkg.binaries = pkg.binaries.map(value => path.resolve(getBaseInstallPath(pkg), value));
-                    }
-                }
 
-                resolve(this.allPackages);
-            }
-            else {
-                reject(new PackageError("Package manifest does not exist."));
-            }
-        });
-    }
+        if (!url) {
+            throw new PackageError(`Unsupported platform: '${platformKey}'`, pkg);
+        }
 
-    private GetPackages(): Promise<Package[]> {
-        return this.GetAllPackages()
-            .then(list => {
-                return list.filter(pkg => {
-                    if (pkg.architectures && pkg.architectures.indexOf(this.platformInfo.architecture) === -1) {
-                        return false;
-                    }
+        logger.append(`Downloading package '${pkg.description}' `);
+        status.setMessage("$(cloud-download) Downloading packages");
+        status.setDetail(`Downloading package '${pkg.description}'...`);
 
-                    if (pkg.platforms && pkg.platforms.indexOf(this.platformInfo.platform) === -1) {
-                        return false;
-                    }
+        const tmpResult = await tmp.file({ prefix: 'package-' });
 
-                    return true;
-                });
-            });
+        pkg.tmpFile = tmpResult;
+
+        const result = await downloadFile(url, pkg, logger, status, proxy);
+        logger.appendLine(' Done!');
+
+        return result;
     }
 }
 
@@ -125,62 +117,14 @@ function getNoopStatus(): Status {
     };
 }
 
-function maybeDownloadPackage(pkg: Package, logger: Logger, status: Status, proxy: string, strictSSL: boolean): Promise<void> {
-    return doesPackageTestPathExist(pkg).then((exists: boolean) => {
-        if (!exists) {
-            return downloadPackage(pkg, logger, status, proxy, strictSSL);
-        } else {
-            logger.appendLine(`Skipping package '${pkg.description}' (already downloaded).`);
-        }
-    });
-}
-
-function downloadPackage(pkg: Package, logger: Logger, status: Status, proxy: string, strictSSL: boolean): Promise<void> {
-    status = status || getNoopStatus();
-
-    logger.append(`Downloading package '${pkg.description}' `);
-    
-    status.setMessage("$(cloud-download) Downloading packages");
-    status.setDetail(`Downloading package '${pkg.description}'...`);
-
-    return new Promise<tmp.SynchrounousResult>((resolve, reject) => {
-        tmp.file({ prefix: 'package-' }, (err, path, fd, cleanupCallback) => {
-            if (err) {
-                return reject(new PackageError('Error from tmp.file', pkg, err));
-            }
-
-            resolve(<tmp.SynchrounousResult>{ name: path, fd: fd, removeCallback: cleanupCallback });
-        });
-    }).then(tmpResult => {
-        pkg.tmpFile = tmpResult;
-
-        let result = downloadFile(pkg.url, pkg, logger, status, proxy, strictSSL)
-            .then(() => logger.appendLine(' Done!'));
-
-        // If the package has a fallback Url, and downloading from the primary Url failed, try again from 
-        // the fallback. This is used for debugger packages as some users have had issues downloading from
-        // the CDN link.
-        if (pkg.fallbackUrl) {
-            result = result.catch((primaryUrlError) => {
-                logger.append(`\tRetrying from '${pkg.fallbackUrl}' `);
-                return downloadFile(pkg.fallbackUrl, pkg, logger, status, proxy, strictSSL)
-                    .then(() => logger.appendLine(' Done!'))
-                    .catch(() => primaryUrlError);
-            });
-        }
-
-        return result;
-    });
-}
-
-function downloadFile(urlString: string, pkg: Package, logger: Logger, status: Status, proxy: string, strictSSL: boolean): Promise<void> {
+function downloadFile(urlString: string, pkg: Package, logger: Logger, status: Status, proxy?: string): Promise<void> {
     const url = parseUrl(urlString);
 
     const options: https.RequestOptions = {
         host: url.host,
         path: url.path,
-        agent: getProxyAgent(url, proxy, strictSSL),
-        rejectUnauthorized: util.isBoolean(strictSSL) ? strictSSL : true
+        agent: getProxyAgent(url, proxy),
+        rejectUnauthorized: true
     };
 
     return new Promise<void>((resolve, reject) => {
@@ -188,24 +132,29 @@ function downloadFile(urlString: string, pkg: Package, logger: Logger, status: S
             return reject(new PackageError("Temporary package file unavailable", pkg));
         }
 
-        let request = https.request(options, response => {
+        const request = https.request(options, response => {
             if (response.statusCode === 301 || response.statusCode === 302) {
                 // Redirect - download from new location
-                return resolve(downloadFile(response.headers.location, pkg, logger, status, proxy, strictSSL));
+                const newLocation = response.headers.location;
+                if (newLocation) {
+                    return resolve(downloadFile(newLocation, pkg, logger, status, proxy));
+                }
+
+                reject(new PackageError("Error getting download location", pkg));
             }
 
             if (response.statusCode != 200) {
                 // Download failed - print error message
                 logger.appendLine(`failed (error code '${response.statusCode}')`);
-                return reject(new PackageError(response.statusCode.toString(), pkg));
+                return reject(new PackageError((response.statusCode || "<missing>").toString(), pkg));
             }
-            
+
             // Downloading - hook up events
-            let packageSize = parseInt(response.headers['content-length'], 10);
+            const packageSize = parseInt(response.headers['content-length'] || "0", 10);
             let downloadedBytes = 0;
             let downloadPercentage = 0;
             let dots = 0;
-            let tmpFile = fs.createWriteStream(null, { fd: pkg.tmpFile.fd });
+            let tmpFile = fs.createWriteStream(pkg.tmpFile.path, { fd: pkg.tmpFile.fd });
 
             logger.append(`(${Math.ceil(packageSize / 1024)} KB) `);
 
@@ -248,94 +197,76 @@ function downloadFile(urlString: string, pkg: Package, logger: Logger, status: S
     });
 }
 
-function installPackage(pkg: Package, logger: Logger, status?: Status): Promise<void> {
-
+async function installPackage(pkg: Package, logger: Logger, status?: Status): Promise<void> {
     if (!pkg.tmpFile) {
         // Download of this package was skipped, so there is nothing to install
-        return Promise.resolve();
+        throw new PackageError("No tmpfile", pkg);
     }
 
     status = status || getNoopStatus();
 
     logger.appendLine(`Installing package '${pkg.description}'`);
-
     status.setMessage("$(desktop-download) Installing packages...");
     status.setDetail(`Installing package '${pkg.description}'`);
 
-    return new Promise<void>((resolve, baseReject) => {
-        const reject = (err) => {
-            // If anything goes wrong with unzip, make sure we delete the test path (if there is one)
-            // so we will retry again later
-            const testPath = getPackageTestPath(pkg);
-            if (testPath) {
-                fs.unlink(testPath, unlinkErr => {
-                    baseReject(err);
-                });
-            } else {
-                baseReject(err);
-            }
-        };
+    let zipFile: yauzl.ZipFile | undefined
 
+    try {
         if (pkg.tmpFile.fd == 0) {
-            return reject(new PackageError('Downloaded file unavailable', pkg));
+            throw new PackageError('Downloaded file unavailable', pkg);
         }
 
-        yauzl.fromFd(pkg.tmpFile.fd, { lazyEntries: true }, (err, zipFile) => {
-            if (err) {
-                return reject(new PackageError('Immediate zip file error', pkg, err));
+        try {
+            zipFile = await yauzl.fromFd(pkg.tmpFile.fd, { lazyEntries: true });
+        }
+        catch (err) {
+            throw new PackageError('Immediate zip file error', pkg, err);
+        }
+
+        await zipFile.walkEntries(async (entry) => {
+            const absoluteEntryPath = path.resolve(getBaseInstallPath(pkg), entry.fileName);
+
+            if (entry.fileName.endsWith('/')) {
+                // Directory - create it
+                await mkdirp(absoluteEntryPath, { mode: 0o755 });
+                return;
             }
+            else {
+                // File - extract it
+                const readStream = await entry.openReadStream();
 
-            zipFile.readEntry();
+                await mkdirp(path.dirname(absoluteEntryPath), { mode: 0o775 });
 
-            zipFile.on('entry', (entry: yauzl.Entry) => {
-                let absoluteEntryPath = path.resolve(getBaseInstallPath(pkg), entry.fileName);
+                // Make sure executable files have correct permissions when extracted
+                const mode = entry.externalFileAttributes >>> 16;
+                const fileMode = (mode & S_IXUSR) ? 0o755 : 0o664;
 
-                if (entry.fileName.endsWith('/')) {
-                    // Directory - create it
-                    mkdirp(absoluteEntryPath, { mode: 0o775 }, err => {
-                        if (err) {
-                            return reject(new PackageError('Error creating directory for zip directory entry:' + err.code || '', pkg, err));
-                        }
-
-                        zipFile.readEntry();
-                    });
-                }
-                else {
-                    // File - extract it
-                    zipFile.openReadStream(entry, (err, readStream) => {
-                        if (err) {
-                            return reject(new PackageError('Error reading zip stream', pkg, err));
-                        }
-
-                        mkdirp(path.dirname(absoluteEntryPath), { mode: 0o775 }, err => {
-                            if (err) {
-                                return reject(new PackageError('Error creating directory for zip file entry', pkg, err));
-                            }
-
-                            // Make sure executable files have correct permissions when extracted
-                            let fileMode = pkg.binaries && pkg.binaries.indexOf(absoluteEntryPath) !== -1
-                                ? 0o755
-                                : 0o664;
-
-                            readStream.pipe(fs.createWriteStream(absoluteEntryPath, { mode: fileMode }));
-                            readStream.on('end', () => zipFile.readEntry());
-                        });
-                    });
-                }
-            });
-
-            zipFile.on('end', () => {
-                resolve();
-            });
-
-            zipFile.on('error', err => {
-                reject(new PackageError('Zip File Error:' + err.code || '', pkg, err));
-            });
+                const writeStream = fs.createWriteStream(absoluteEntryPath, { mode: fileMode });
+                readStream.pipe(writeStream);
+                await (new Promise((resolve, reject) => {
+                    readStream.on('end', resolve);
+                    readStream.on('error', reject);
+                }));
+            }
         });
-    }).then(() => {
-        // Clean up temp file
-        pkg.tmpFile.removeCallback();
-    });
+    }
+    catch(err) {
+        // If anything goes wrong with unzip, make sure we delete the test path (if there is one)
+        // so we will retry again later
+        const testPath = getPackageTestPath(pkg);
+        if (testPath) {
+            await promisify(fs.unlink)(testPath);
+        } else {
+            throw err;
+        }
+    } finally {
+        if (zipFile !== undefined) {
+            await zipFile.close();
+        }
+    }
+
+    // Clean up temp file
+    await pkg.tmpFile.cleanup();
 }
 
 function doesPackageTestPathExist(pkg: Package) : Promise<boolean> {
@@ -347,10 +278,8 @@ function doesPackageTestPathExist(pkg: Package) : Promise<boolean> {
     }
 }
 
-function getPackageTestPath(pkg: Package) : string {
+function getPackageTestPath(pkg: Package) : string | undefined {
     if (pkg.installTestPath) {
         return path.join(util.getExtensionPath(), pkg.installTestPath);
-    } else {
-        return null;
     }
 }

@@ -1,6 +1,6 @@
 'use strict';
 
-import { workspace, WorkspaceConfiguration } from 'vscode';
+import { WorkspaceConfiguration } from 'vscode';
 
 export class SnootyConfiguration {
 

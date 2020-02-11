@@ -2,7 +2,7 @@
 
 import * as fs from "fs";
 import * as vscode from "vscode";
-import { ServerOptions, Executable, LanguageClient, LanguageClientOptions, CancellationToken } from 'vscode-languageclient';
+import { ServerOptions, Executable, LanguageClient, LanguageClientOptions } from 'vscode-languageclient';
 import * as mime from "mime";
 import * as open from "open";
 import { Logger } from "./logger";
@@ -12,7 +12,7 @@ import { registerSnootyPreview } from "./preview";
 import { DocumentLinkProvider } from "./docLinkProvider";
 
 const EXTENSION_ID = 'i80and.snooty';
-let logger: Logger = null;
+let logger: Logger | undefined;
 
 let _channel: vscode.OutputChannel;
 function getOutputChannel(): vscode.OutputChannel {
@@ -26,14 +26,18 @@ function getOutputChannel(): vscode.OutputChannel {
 // your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
     const extension = vscode.extensions.getExtension(EXTENSION_ID);
+    if (!extension) {
+        return;
+    }
+
     util.setExtensionPath(extension.extensionPath);
     logger = new Logger(text => getOutputChannel().append(text));
     await ensureRuntimeDependencies(extension, logger);
 
-    let executableCommand = vscode.workspace.getConfiguration('snooty')
-        .get('languageServerPath', null);
+    let executableCommand: string | undefined = vscode.workspace.getConfiguration('snooty')
+        .get('languageServerPath', undefined);
 
-    if (executableCommand === null) {
+    if (!executableCommand) {
         const languageServerPaths = [
             ".snooty/snooty/snooty"
         ]
@@ -63,13 +67,14 @@ export async function activate(context: vscode.ExtensionContext) {
     };
 
     // client extensions configure their server
+    const documentSelector = [
+        { language: 'plaintext', scheme: 'file' },
+        { language: 'yaml', scheme: 'file' },
+        { language: 'restructuredtext', scheme: 'file' },
+        { language: 'toml', scheme: 'file' },
+    ];
     const clientOptions: LanguageClientOptions = {
-        documentSelector: [
-            { language: 'plaintext', scheme: 'file' },
-            { language: 'yaml', scheme: 'file' },
-            { language: 'restructuredtext', scheme: 'file' },
-            { language: 'toml', scheme: 'file' },
-        ],
+        documentSelector,
         synchronize: {
             configurationSection: 'snooty',
             fileEvents: [
@@ -113,7 +118,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Shows clickable link to file after hovering over it
     vscode.languages.registerHoverProvider(
-        clientOptions.documentSelector,
+        documentSelector,
         new class implements vscode.HoverProvider {
           provideHover(
             _document: vscode.TextDocument,
@@ -132,18 +137,19 @@ export async function activate(context: vscode.ExtensionContext) {
                 let request = async () => {
                     let contents: vscode.MarkdownString;
 
-                    await client.sendRequest("textDocument/resolve", {fileName: word, docPath: _document.uri.path, resolveType: "directive"}).then((file: string) => {
-                        hoverFile = file;
-                        const command = vscode.Uri.parse(`command:snooty.clickInclude`);
+                    const file: string = await client.sendRequest("textDocument/resolve", {fileName: word, docPath: _document.uri.path, resolveType: "directive"});
+                    const command = vscode.Uri.parse(`command:snooty.clickInclude`);
 
-                        // Clean up absolute path for better UX. str.match() was not working with regex but can look into later
-                        let workspaceFolder = vscode.workspace.name;
-                        let folderIndex = hoverFile.search(workspaceFolder);
-                        let hoverPathRelative = hoverFile.slice(folderIndex);
+                    // Clean up absolute path for better UX. str.match() was not working with regex but can look into later
+                    let workspaceFolder = vscode.workspace.name;
+                    if (!workspaceFolder) {
+                        return;
+                    }
+                    let folderIndex = file.search(workspaceFolder);
+                    let hoverPathRelative = file.slice(folderIndex);
 
-                        contents = new vscode.MarkdownString(`[${hoverPathRelative}](${command})`);
-                        contents.isTrusted = true; // Enables commands to be used
-                    });
+                    contents = new vscode.MarkdownString(`[${hoverPathRelative}](${command})`);
+                    contents.isTrusted = true; // Enables commands to be used
 
                     return new vscode.Hover(contents, wordRange);
                 }
@@ -155,7 +161,7 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     vscode.languages.registerDocumentLinkProvider(
-        clientOptions.documentSelector, 
+        documentSelector,
         new DocumentLinkProvider(client)
     );
 }
