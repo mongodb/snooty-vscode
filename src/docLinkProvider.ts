@@ -26,8 +26,12 @@ export class DocumentLinkProvider implements vscode.DocumentLinkProvider {
   async resolveDocumentLink(
     link: vscode.DocumentLink,
     token: CancellationToken
-  ): Promise<vscode.DocumentLink> {
-    const document = vscode.window.activeTextEditor.document;
+  ): Promise<vscode.DocumentLink | undefined> {
+    const activeTextEditor = vscode.window.activeTextEditor;
+    if (!activeTextEditor) {
+      return undefined;
+    }
+    const document = activeTextEditor.document;
     const text = document.getText(link.range);
     link.target = await this._findTargetUri(document, text);
     return link;
@@ -54,6 +58,9 @@ export class DocumentLinkProvider implements vscode.DocumentLinkProvider {
       if (targetMatches === null) {
         targetMatches = docRole.match(/(?<=`)\S+(?=`)/);
       }
+      if (!targetMatches) {
+        continue;
+      }
       const target = targetMatches[0];
       const targetIndex = docRole.indexOf(target);
 
@@ -77,14 +84,13 @@ export class DocumentLinkProvider implements vscode.DocumentLinkProvider {
     document: vscode.TextDocument,
     target: string
   ): Promise<vscode.Uri> {
-    return await this._client
+    const file: string = await this._client
       .sendRequest("textDocument/resolve", {
         fileName: target,
         docPath: document.uri.path,
         resolveType: "doc"
       })
-      .then((file: string) => {
-        return vscode.Uri.file(file);
-      });
+
+    return vscode.Uri.file(file);
   }
 }

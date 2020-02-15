@@ -19,7 +19,7 @@ export class Logger {
 
     constructor(writer: (message: string) => void, prefix?: string) {
         this._writer = writer;
-        this._prefix = prefix;
+        this._prefix = prefix || "";
     }
 
     private _appendCore(message: string): void {
@@ -36,7 +36,7 @@ export class Logger {
             this._atLineStart = false;
         }
 
-        this.write(message); 
+        this.write(message);
     }
 
     public increaseIndent(): void {

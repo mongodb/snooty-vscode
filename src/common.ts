@@ -22,10 +22,6 @@ export function getExtensionPath() {
     return extensionPath;
 }
 
-export function isBoolean(obj: any): obj is boolean {
-    return obj === true || obj === false;
-}
-
 export function sum<T>(arr: T[], selector: (item: T) => number): number {
     return arr.reduce((prev, curr) => prev + selector(curr), 0);
 }
@@ -33,12 +29,6 @@ export function sum<T>(arr: T[], selector: (item: T) => number): number {
 /** Retrieve the length of an array. Returns 0 if the array is `undefined`. */
 export function safeLength<T>(arr: T[] | undefined) {
     return arr ? arr.length : 0;
-}
-
-export function buildPromiseChain<T, TResult>(array: T[], builder: (item: T) => Promise<TResult>): Promise<TResult> {
-    return array.reduce(
-        (promise, n) => promise.then(() => builder(n)),
-        Promise.resolve<TResult>(null));
 }
 
 export function execChildProcess(command: string, workingDirectory: string = getExtensionPath()): Promise<string> {
@@ -171,9 +161,9 @@ export function convertNativePathToPosix(pathString: string): string {
 
 /**
  * This function checks to see if a subfolder is part of folder.
- * 
+ *
  * Assumes subfolder and folder are absolute paths and have consistent casing.
- * 
+ *
  * @param subfolder subfolder to check if it is part of the folder parameter
  * @param folder folder to check aganist
  */

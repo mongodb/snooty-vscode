@@ -1,5 +1,6 @@
 /* This file contains functions relevant for Snooty Preview */
 
+import { promisify } from "util";
 import * as vscode from "vscode";
 import * as path from "path";
 import * as fs from "fs";
@@ -15,8 +16,15 @@ export function registerSnootyPreview(
   const snootyPreview: vscode.Disposable = vscode.commands.registerCommand(
     "snooty.snootyPreview",
     async () => {
+      const activeTextEditor = vscode.window.activeTextEditor;
+      if (!activeTextEditor) {
+        return;
+      }
+      const textDocument: vscode.TextDocument = activeTextEditor.document;
+      const fileName: string = textDocument.fileName;
+
       const projectName: string = await getProjectName(client);
-      const previewPage: string = await getPageFileId(client);
+      const previewPage: string = await getPageFileId(client, fileName);
 
       // Create task for Snooty Preview
       const previewBundleTask: vscode.Task = createPreviewBundleTask(
@@ -31,7 +39,7 @@ export function registerSnootyPreview(
       });
 
       // Snooty Preview task should really only run if valid ast is received
-      const getPageASTStatus = await getPageAST(client, extension);
+      const getPageASTStatus = await getPageAST(client, extension, fileName);
       if (!getPageASTStatus) {
         await vscode.tasks.executeTask(previewBundleTask);
       }
@@ -47,10 +55,7 @@ async function getProjectName(client: LanguageClient): Promise<string> {
 }
 
 // Get the file id of the file currently using Snooty Preview
-async function getPageFileId(client: LanguageClient): Promise<string> {
-  const textDocument: vscode.TextDocument =
-    vscode.window.activeTextEditor.document;
-  const fileName: string = textDocument.fileName;
+async function getPageFileId(client: LanguageClient, fileName: string): Promise<string> {
   return await client.sendRequest("textDocument/get_page_fileid", {
     filePath: fileName
   });
@@ -60,26 +65,17 @@ async function getPageFileId(client: LanguageClient): Promise<string> {
 // Returns 0 on success, 1 on failure (i.e. an unsupported file)
 async function getPageAST(
   client: LanguageClient,
-  extension: vscode.Extension<any>
+  extension: vscode.Extension<any>,
+  fileName: string
 ): Promise<Number> {
-  const textDocument: vscode.TextDocument =
-    vscode.window.activeTextEditor.document;
-  const fileName: string = textDocument.fileName;
-
   if (hasValidExtension(fileName)) {
-    await client
-      .sendRequest("textDocument/get_page_ast", { fileName })
-      .then((ast: any) => {
-        // Save page AST as a file
-        const astFilePath = path.resolve(
-          extension.extensionPath,
-          "snooty-frontend/preview",
-          "page-ast.json"
-        );
-        fs.writeFile(astFilePath, JSON.stringify(ast), err => {
-          if (err) throw err;
-        });
-      });
+    const ast = await client.sendRequest("textDocument/get_page_ast", { fileName })
+    const astFilePath = path.resolve(
+      extension.extensionPath,
+      "snooty-frontend/preview",
+      "page-ast.json"
+    );
+    await promisify(fs.writeFile)(astFilePath, JSON.stringify(ast));
 
     return 0;
   }
