@@ -8,7 +8,6 @@ import * as open from "open";
 import { Logger } from "./logger";
 import * as util from './common';
 import { ExtensionDownloader } from "./ExtensionDownloader";
-import { registerSnootyPreview } from "./preview";
 import { DocumentLinkProvider } from "./docLinkProvider";
 
 const EXTENSION_ID = 'i80and.snooty';
@@ -112,9 +111,6 @@ export async function activate(context: vscode.ExtensionContext) {
         }
     });
     context.subscriptions.push(clickInclude);
-
-    // Register Snooty Preview as a valid command to run
-    registerSnootyPreview(client, context, extension);
 
     // Shows clickable link to file after hovering over it
     vscode.languages.registerHoverProvider(
