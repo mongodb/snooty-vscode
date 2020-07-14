@@ -5,3 +5,5 @@ node_modules/
 .snooty/
 install.*
 *.vsix
+snippets/
+scripts/rstspec.toml
