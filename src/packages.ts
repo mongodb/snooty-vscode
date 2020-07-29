@@ -255,7 +255,7 @@ async function installPackage(pkg: Package, logger: Logger, status?: Status): Pr
         // so we will retry again later
         const testPath = getPackageTestPath(pkg);
         if (testPath) {
-            await promisify(fs.unlink)(testPath);
+            fs.unlink(testPath, (unlinkError) => console.error(unlinkError));
         } else {
             throw err;
         }
