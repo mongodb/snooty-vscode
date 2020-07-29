@@ -13,7 +13,7 @@
 		"type": "git",
 		"url": "https://github.com/mongodb/snooty-vscode"
 	},
-	"publisher": "i80and",
+	"publisher": "snooty",
 	"categories": [
 		"Programming Languages",
 		"Linters"
