@@ -16,7 +16,7 @@ let logger: Logger | undefined;
 let _channel: vscode.OutputChannel;
 function getOutputChannel(): vscode.OutputChannel {
 	if (!_channel) {
-		_channel = vscode.window.createOutputChannel('Snooty');
+		_channel = vscode.window.createOutputChannel('Snooty Extension');
 	}
 	return _channel;
 }
@@ -85,7 +85,7 @@ export async function activate(context: vscode.ExtensionContext) {
         }
     }
 
-    const client = new LanguageClient('Snooty', serverOptions, clientOptions);
+    const client = new LanguageClient('Snooty Language Client', serverOptions, clientOptions);
     const restartServer = vscode.commands.registerCommand('snooty.restart', async () => {
         await client.stop();
         return client.start();
