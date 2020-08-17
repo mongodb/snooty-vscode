@@ -185,7 +185,7 @@ function downloadFile(urlString: string, pkg: Package, logger: Logger, status: S
             });
 
             // Begin piping data from the response to the package file
-            response.pipe(tmpFile, { end: false });
+            response.pipe(tmpFile);
         });
 
         request.on('error', err => {
@@ -217,7 +217,7 @@ async function installPackage(pkg: Package, logger: Logger, status?: Status): Pr
         }
 
         try {
-            zipFile = await yauzl.fromFd(pkg.tmpFile.fd, { lazyEntries: true });
+            zipFile = await yauzl.open(pkg.tmpFile.path, { lazyEntries: true });
         }
         catch (err) {
             throw new PackageError('Immediate zip file error', pkg, err);
@@ -256,9 +256,9 @@ async function installPackage(pkg: Package, logger: Logger, status?: Status): Pr
         const testPath = getPackageTestPath(pkg);
         if (testPath) {
             fs.unlink(testPath, (unlinkError) => console.error(unlinkError));
-        } else {
-            throw err;
         }
+
+        throw err;
     } finally {
         if (zipFile !== undefined) {
             await zipFile.close();
