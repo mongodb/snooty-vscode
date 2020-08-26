@@ -1,3 +1,11 @@
+.PHONY: clean snippets lint
+
+lint:
+	for url in `python3 -c 'import json; print(" ".join(json.load(open("package.json"))["runtimeDependencies"][0]["platforms"].values()))'`; do \
+		echo "$${url}"; \
+		curl -sI "$${url}" | grep -F '302 Found'; \
+	done
+
 clean:
 	rm -rf snippets
 	rm -f scripts/rstspec.toml
