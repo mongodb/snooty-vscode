@@ -10,6 +10,8 @@ import * as util from './common';
 import { ExtensionDownloader } from "./ExtensionDownloader";
 import { DocumentLinkProvider } from "./docLinkProvider";
 
+import {activate as spigotActivate} from "./spigot-client/extension";
+
 let logger: Logger | undefined;
 
 let _channel: vscode.OutputChannel;
@@ -23,6 +25,8 @@ function getOutputChannel(): vscode.OutputChannel {
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
+    spigotActivate(context);
+ 
     util.setExtensionPath(context.extensionPath);
     logger = new Logger(text => getOutputChannel().append(text));
 

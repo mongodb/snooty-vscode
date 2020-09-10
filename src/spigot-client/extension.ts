@@ -60,8 +60,8 @@ function getOuterMostWorkspaceFolder(folder: WorkspaceFolder): WorkspaceFolder {
 }
 
 export function activate(context: ExtensionContext) {
-  let module = context.asAbsolutePath(path.join("server", "out", "server.js"));
-  let outputChannel: OutputChannel = Window.createOutputChannel("snoot");
+  let module = context.asAbsolutePath(path.join("out", "spigot-server", "server.js"));
+  let outputChannel: OutputChannel = Window.createOutputChannel("Snooty Spigot");
 
   function didOpenTextDocument(document: TextDocument): void {
     // We are only interested in language mode text
@@ -91,21 +91,22 @@ export function activate(context: ExtensionContext) {
         run: { module, transport: TransportKind.ipc },
         debug: { module, transport: TransportKind.ipc, options: debugOptions },
       };
+      // client extensions configure their server
+      const documentSelector = [
+          { language: 'plaintext', scheme: 'file' },
+          { language: 'yaml', scheme: 'file' },
+          { language: 'restructuredtext', scheme: 'file' },
+          { language: 'toml', scheme: 'file' },
+      ];
       let clientOptions: LanguageClientOptions = {
-        documentSelector: [
-          {
-            scheme: "file",
-            language: "restructuredtext",
-            pattern: `${folder.uri.fsPath}/**/*`,
-          },
-        ],
-        diagnosticCollectionName: "snoot",
+        documentSelector,
+        diagnosticCollectionName: "snooty-spigot",
         workspaceFolder: folder,
         outputChannel,
       };
       let client = new LanguageClient(
-        "snoot",
-        "Snoot Sphinx Support",
+        "snooty-spigot",
+        "Snooty Spigot",
         serverOptions,
         clientOptions
       );
