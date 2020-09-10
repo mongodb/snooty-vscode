@@ -18,10 +18,24 @@ import {
   LanguageClient,
   LanguageClientOptions,
   TransportKind,
+  DidChangeConfigurationNotification,
+  DidChangeConfigurationParams,
 } from "vscode-languageclient";
 
+const SNOOTY_SPIGOT_CONFIGURATION = "snooty.spigot";
+
 let clients: Map<string, LanguageClient> = new Map();
-let isActive = false;
+
+interface State {
+  shutdownPromise: Promise<void> | null;
+  isActive: boolean;
+}
+const state: State = {
+  shutdownPromise: null,
+  isActive: false,
+};
+
+let sourceRelativePath = "source/";
 let modulePath: string = "";
 let _sortedWorkspaceFolders: string[] | undefined;
 let outputChannel: OutputChannel;
@@ -50,19 +64,55 @@ Workspace.onDidChangeWorkspaceFolders(
 );
 
 function isEnabled(): boolean {
-  return Workspace.getConfiguration("snooty").get<boolean>("spigot.enabled");
+  return Workspace.getConfiguration(SNOOTY_SPIGOT_CONFIGURATION).get<boolean>(
+    "enabled"
+  );
 }
 
-Workspace.onDidChangeConfiguration(() => {
-  console.log("Configuration changed");
+function getSourceRelativePath(): string {
+  return Workspace.getConfiguration(SNOOTY_SPIGOT_CONFIGURATION).get<string>(
+    "sourceRelativePath"
+  );
+}
+
+function sendSourceRelativePathNotifications() {
+  // For some reason, this is not automatically firing when
+  // workspace configuration changes, unless I'm missing something...
+  clients.forEach((client) => {
+    const params: DidChangeConfigurationParams = {
+      settings: {
+        snooty: {
+          spigot: {
+            sourceRelativePath,
+          },
+        },
+      },
+    };
+    client.sendNotification(DidChangeConfigurationNotification.type, params);
+  });
+}
+
+Workspace.onDidChangeConfiguration((e) => {
+  if (!e.affectsConfiguration(SNOOTY_SPIGOT_CONFIGURATION)) {
+    return;
+  }
+
   const enabled = isEnabled();
-  if (enabled && !isActive) {
-    outputChannel.appendLine("Activating Snooty Spigot...");
+  if (enabled && !state.isActive) {
     continueActivation();
-  } else if (!enabled && isActive) {
+  } else if (!enabled && state.isActive) {
     outputChannel.appendLine("Snooty Spigot hibernating...");
     deactivate();
   }
+
+  const newSourceRelativePath = getSourceRelativePath();
+
+  if (newSourceRelativePath === sourceRelativePath) {
+    return;
+  }
+
+  sourceRelativePath = newSourceRelativePath;
+  sendSourceRelativePathNotifications();
 });
 
 function getOuterMostWorkspaceFolder(folder: WorkspaceFolder): WorkspaceFolder {
@@ -88,18 +138,14 @@ export function activate(context: ExtensionContext) {
   outputChannel = Window.createOutputChannel("Snooty Spigot");
 
   if (!isEnabled()) {
-    outputChannel.appendLine(
-      "Activate called while Snooty Spigot is not enabled. Hibernating..."
-    );
+    outputChannel.appendLine("Snooty Spigot is not enabled. Hibernating...");
     return;
   }
 
-  continueActivation();
-}
-
-function continueActivation() {
-  isActive = true;
   function didOpenTextDocument(document: TextDocument): void {
+    if (!state.isActive) {
+      return;
+    }
     // We are only interested in language mode text
     if (
       document.languageId !== "restructuredtext" ||
@@ -143,6 +189,9 @@ function continueActivation() {
         diagnosticCollectionName: "snooty-spigot",
         workspaceFolder: folder,
         outputChannel,
+        initializationOptions: {
+          sourceRelativePath: getSourceRelativePath(),
+        },
       };
       const client = new LanguageClient(
         "snooty-spigot",
@@ -166,13 +215,47 @@ function continueActivation() {
       }
     }
   });
+  continueActivation();
+}
+
+function continueActivation() {
+  outputChannel.appendLine("Activating Snooty Spigot...");
+  if (state.shutdownPromise) {
+    // Come back later.
+    outputChannel.appendLine("Snooty Spigot rebooting...");
+    return state.shutdownPromise.then(continueActivation);
+  }
+  if (state.isActive) {
+    return;
+  }
+  state.isActive = true;
+  outputChannel.appendLine("Snooty Spigot activated.");
 }
 
 export function deactivate(): Thenable<void> {
-  isActive = false;
-  const promises: Thenable<void>[] = [];
-  for (const client of clients.values()) {
-    promises.push(client.stop());
+  outputChannel.appendLine("Deactivating Snooty Spigot...");
+  if (state.shutdownPromise) {
+    return;
   }
-  return Promise.all(promises).then(() => undefined);
+  state.shutdownPromise = new Promise((resolve, reject) => {
+    const promises: Thenable<void>[] = [];
+    for (const client of clients.values()) {
+      promises.push(client.stop());
+    }
+    Promise.all(promises)
+      .then(() => {
+        outputChannel.appendLine("Snooty Spigot shut down complete.");
+        clients.clear();
+        state.shutdownPromise = null;
+        state.isActive = false;
+        resolve();
+      })
+      .catch((error) => {
+        outputChannel.appendLine(`Snooty Spigot shut down failed: ${error}`);
+        console.error(error);
+        state.shutdownPromise = null;
+        state.isActive = false;
+        reject(error);
+      });
+  });
 }

@@ -18,6 +18,7 @@ import {
   CodeAction,
   ExecuteCommandParams,
   CodeActionKind,
+  DidChangeConfigurationParams,
 } from "vscode-languageserver";
 import globby = require("globby");
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -30,6 +31,7 @@ class Server {
   connection: Reporter;
   workspaceFolders: WorkspaceFolder[] = [];
   project = new Project();
+  sourceRelativePath = "source/";
 
   constructor(connection: Reporter) {
     this.connection = connection;
@@ -38,8 +40,17 @@ class Server {
   onInitialize = (params: InitializeParams): InitializeResult => {
     this.workspaceFolders = params.workspaceFolders || [];
 
+    const sourceRelativePath = params.initializationOptions?.sourceRelativePath;
+    if (sourceRelativePath) {
+      this.sourceRelativePath = sourceRelativePath;
+    }
+
     // Report server capabilities to the client.
     return {
+      serverInfo: {
+        name: "snooty-spigot-server",
+        version: "0.0.1",
+      },
       capabilities: {
         textDocumentSync: TextDocumentSyncKind.Incremental,
         completionProvider: {
@@ -67,8 +78,9 @@ class Server {
     const cwd = new URL(folder.uri).pathname;
 
     // TODO: allow configuration
-    const sourceDirectory = "source/";
+    const sourceDirectory = this.sourceRelativePath;
 
+    console.log(`Scanning ${cwd}/${sourceDirectory}...`);
     const paths = await globby(sourceDirectory, {
       onlyFiles: true,
       expandDirectories: { extensions: ["txt", "yaml", "rst"] },
@@ -124,6 +136,20 @@ class Server {
     });
   };
 
+  onDidChangeConfiguration = (params: DidChangeConfigurationParams) => {
+    const sourceRelativePath =
+      params.settings.snooty?.spigot?.sourceRelativePath;
+    if (!sourceRelativePath) {
+      return;
+    }
+    console.log("Got new sourceRelativePath:", sourceRelativePath);
+    this.sourceRelativePath = sourceRelativePath;
+
+    // Reinitialize documents
+    this.project = new Project();
+    this.onInitialized();
+  };
+
   onDidChangeContent = (change: TextDocumentChangeEvent<TextDocument>) => {
     const { document } = change;
     const diagnostics = this.project.updateDocument(document);
@@ -177,6 +203,8 @@ const server = new Server(connection);
 // These handlers report the server capabilities to the client and load the workspace.
 connection.onInitialize(server.onInitialize);
 connection.onInitialized(server.onInitialized);
+
+connection.onDidChangeConfiguration(server.onDidChangeConfiguration);
 
 // This handler provides the initial list of the completion items.
 connection.onCompletion(server.onCompletion);
