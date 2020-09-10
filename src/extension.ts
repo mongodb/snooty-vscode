@@ -10,7 +10,7 @@ import * as util from './common';
 import { ExtensionDownloader } from "./ExtensionDownloader";
 import { DocumentLinkProvider } from "./docLinkProvider";
 
-import {activate as spigotActivate} from "./spigot-client/extension";
+import * as Spigot from "./spigot-client/extension";
 
 let logger: Logger | undefined;
 
@@ -25,8 +25,11 @@ function getOutputChannel(): vscode.OutputChannel {
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
-    spigotActivate(context);
- 
+
+    // Run the spigot client, which launches the spigot server
+    // and provides additional Sphinx-style role support
+    Spigot.activate(context);
+
     util.setExtensionPath(context.extensionPath);
     logger = new Logger(text => getOutputChannel().append(text));
 

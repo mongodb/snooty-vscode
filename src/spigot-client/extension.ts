@@ -2,6 +2,7 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
+// Adapted from Microsoft VS Code extension example
 import * as path from "path";
 import {
   workspace as Workspace,
@@ -20,8 +21,11 @@ import {
 } from "vscode-languageclient";
 
 let clients: Map<string, LanguageClient> = new Map();
-
+let isActive = false;
+let modulePath: string = "";
 let _sortedWorkspaceFolders: string[] | undefined;
+let outputChannel: OutputChannel;
+
 function sortedWorkspaceFolders(): string[] {
   if (_sortedWorkspaceFolders === void 0) {
     _sortedWorkspaceFolders = Workspace.workspaceFolders
@@ -45,9 +49,25 @@ Workspace.onDidChangeWorkspaceFolders(
   () => (_sortedWorkspaceFolders = undefined)
 );
 
+function isEnabled(): boolean {
+  return Workspace.getConfiguration("snooty").get<boolean>("spigot.enabled");
+}
+
+Workspace.onDidChangeConfiguration(() => {
+  console.log("Configuration changed");
+  const enabled = isEnabled();
+  if (enabled && !isActive) {
+    outputChannel.appendLine("Activating Snooty Spigot...");
+    continueActivation();
+  } else if (!enabled && isActive) {
+    outputChannel.appendLine("Snooty Spigot hibernating...");
+    deactivate();
+  }
+});
+
 function getOuterMostWorkspaceFolder(folder: WorkspaceFolder): WorkspaceFolder {
-  let sorted = sortedWorkspaceFolders();
-  for (let element of sorted) {
+  const sorted = sortedWorkspaceFolders();
+  for (const element of sorted) {
     let uri = folder.uri.toString();
     if (uri.charAt(uri.length - 1) !== "/") {
       uri = uri + "/";
@@ -60,9 +80,25 @@ function getOuterMostWorkspaceFolder(folder: WorkspaceFolder): WorkspaceFolder {
 }
 
 export function activate(context: ExtensionContext) {
-  let module = context.asAbsolutePath(path.join("out", "spigot-server", "server.js"));
-  let outputChannel: OutputChannel = Window.createOutputChannel("Snooty Spigot");
+  // While this extension is experimental and dependent on Snooty,
+  // we can hibernate if the sub-extension is not enabled in the settings.
+  modulePath = context.asAbsolutePath(
+    path.join("out", "spigot-server", "server.js")
+  );
+  outputChannel = Window.createOutputChannel("Snooty Spigot");
 
+  if (!isEnabled()) {
+    outputChannel.appendLine(
+      "Activate called while Snooty Spigot is not enabled. Hibernating..."
+    );
+    return;
+  }
+
+  continueActivation();
+}
+
+function continueActivation() {
+  isActive = true;
   function didOpenTextDocument(document: TextDocument): void {
     // We are only interested in language mode text
     if (
@@ -72,7 +108,7 @@ export function activate(context: ExtensionContext) {
       return;
     }
 
-    let uri = document.uri;
+    const uri = document.uri;
 
     let folder = Workspace.getWorkspaceFolder(uri);
     // Files outside a folder can't be handled. This might depend on the language.
@@ -84,27 +120,31 @@ export function activate(context: ExtensionContext) {
     folder = getOuterMostWorkspaceFolder(folder);
 
     if (!clients.has(folder.uri.toString())) {
-      let debugOptions = {
+      const debugOptions = {
         execArgv: ["--nolazy", `--inspect=${6011 + clients.size}`],
       };
-      let serverOptions = {
-        run: { module, transport: TransportKind.ipc },
-        debug: { module, transport: TransportKind.ipc, options: debugOptions },
+      const serverOptions = {
+        run: { module: modulePath, transport: TransportKind.ipc },
+        debug: {
+          module: modulePath,
+          transport: TransportKind.ipc,
+          options: debugOptions,
+        },
       };
       // client extensions configure their server
       const documentSelector = [
-          { language: 'plaintext', scheme: 'file' },
-          { language: 'yaml', scheme: 'file' },
-          { language: 'restructuredtext', scheme: 'file' },
-          { language: 'toml', scheme: 'file' },
+        { language: "plaintext", scheme: "file" },
+        { language: "yaml", scheme: "file" },
+        { language: "restructuredtext", scheme: "file" },
+        { language: "toml", scheme: "file" },
       ];
-      let clientOptions: LanguageClientOptions = {
+      const clientOptions: LanguageClientOptions = {
         documentSelector,
         diagnosticCollectionName: "snooty-spigot",
         workspaceFolder: folder,
         outputChannel,
       };
-      let client = new LanguageClient(
+      const client = new LanguageClient(
         "snooty-spigot",
         "Snooty Spigot",
         serverOptions,
@@ -118,8 +158,8 @@ export function activate(context: ExtensionContext) {
   Workspace.onDidOpenTextDocument(didOpenTextDocument);
   Workspace.textDocuments.forEach(didOpenTextDocument);
   Workspace.onDidChangeWorkspaceFolders((event) => {
-    for (let folder of event.removed) {
-      let client = clients.get(folder.uri.toString());
+    for (const folder of event.removed) {
+      const client = clients.get(folder.uri.toString());
       if (client) {
         clients.delete(folder.uri.toString());
         client.stop();
@@ -129,8 +169,9 @@ export function activate(context: ExtensionContext) {
 }
 
 export function deactivate(): Thenable<void> {
-  let promises: Thenable<void>[] = [];
-  for (let client of clients.values()) {
+  isActive = false;
+  const promises: Thenable<void>[] = [];
+  for (const client of clients.values()) {
     promises.push(client.stop());
   }
   return Promise.all(promises).then(() => undefined);
