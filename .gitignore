@@ -7,3 +7,4 @@ install.*
 *.vsix
 snippets/
 scripts/rstspec.toml
+coverage/
