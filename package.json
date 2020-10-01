@@ -3,7 +3,7 @@
 	"description": "Snooty is a next-generation documentation authoring IDE.",
 	"author": "MongoDB",
 	"license": "SEE LICENSE IN LICENSE",
-	"version": "0.2.3",
+	"version": "0.2.4",
 	"icon": "misc/icon.png",
 	"galleryBanner": {
 		"color": "#FFF",
