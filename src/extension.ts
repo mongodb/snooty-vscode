@@ -1,14 +1,12 @@
 'use strict';
 
-import * as fs from "fs";
 import * as vscode from "vscode";
 import { ServerOptions, Executable, LanguageClient, LanguageClientOptions } from 'vscode-languageclient';
 import * as mime from "mime";
 import * as open from "open";
 import { Logger } from "./logger";
-import * as util from './common';
-import { ExtensionDownloader } from "./ExtensionDownloader";
 import { DocumentLinkProvider } from "./docLinkProvider";
+import { exec, ExecException } from 'child_process';
 
 let logger: Logger | undefined;
 
@@ -23,7 +21,6 @@ function getOutputChannel(): vscode.OutputChannel {
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
-    util.setExtensionPath(context.extensionPath);
     logger = new Logger(text => getOutputChannel().append(text));
 
     const extension = vscode.extensions.all.find(ext => ext.extensionUri === context.extensionUri);
@@ -32,23 +29,48 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
     }
 
-    await ensureRuntimeDependencies(extension, logger);
-
+    // check if the path is overridden.
     let executableCommand: string | undefined = vscode.workspace.getConfiguration('snooty')
         .get('languageServerPath', undefined);
+    let args: string[] = [];
+    if (executableCommand) {
+        args.push('language-server');
+    } else {
+        logger.appendLine('Could not find executable configured in snooty.languageServerPath. Try snooty package for Python');
+        // load Python package.
+        const defaultPythonCommand = 'python';
+        try {
+            const extension = vscode.extensions.getExtension('ms-python.python');
+            if (!extension) {
+                executableCommand = defaultPythonCommand;
+            } else {
+                const usingNewInterpreterStorage = extension.packageJSON?.featureFlags?.usingNewInterpreterStorage;
+                if (usingNewInterpreterStorage) {
+                    if (!extension.isActive) {
+                        await extension.activate();
+                    }
+                    executableCommand = extension.exports.settings.getExecutionDetails().execCommand[0];
+                } else {
+                    executableCommand = vscode.workspace.getConfiguration('python').get<string>('pythonPath', '');
+                }
+            }
+        } catch (error) {
+            executableCommand = defaultPythonCommand;
+        }
 
-    if (!executableCommand) {
-        const languageServerPaths = [
-            ".snooty/snooty/snooty"
-        ]
-
-        for (let p of languageServerPaths) {
-            p = context.asAbsolutePath(p);
-            if (fs.existsSync(p)) {
-                executableCommand = p;
-                break;
+        if (!(await checkSnootyInstall(executableCommand))) {
+            logger.appendLine('snooty package for Python is not installed');
+            var choice = await vscode.window.showInformationMessage('Language server snooty is not installed.', 'Install', 'Not now');
+            if (choice === 'Install') {
+                logger.appendLine('Started to install snooty...');
+                await installSnooty(executableCommand);
+            } else {
+                vscode.window.showWarningMessage('No IntelliSense. Language server snooty is not installed.');
+                logger.appendLine('User decided to exit');
+                return;
             }
         }
+        args.push('-m', 'snooty', 'language-server');
     }
 
     if (!executableCommand) {
@@ -57,7 +79,7 @@ export async function activate(context: vscode.ExtensionContext) {
     }
 
     const run: Executable = {
-        args: ['language-server'],
+        args: args,
         command: executableCommand
     };
     const debug: Executable = run;
@@ -84,7 +106,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 vscode.workspace.createFileSystemWatcher('snooty.toml')
             ]
         }
-    }
+    };
 
     const client = new LanguageClient('Snooty Language Client', serverOptions, clientOptions);
     const restartServer = vscode.commands.registerCommand('snooty.restart', async () => {
@@ -167,12 +189,51 @@ export async function activate(context: vscode.ExtensionContext) {
 export function deactivate() {
 }
 
-async function ensureRuntimeDependencies(extension: vscode.Extension<object>, logger: Logger): Promise<boolean> {
-    const exists = await util.installFileExists(util.InstallFileType.Lock);
-    if (!exists) {
-        const downloader = new ExtensionDownloader(getOutputChannel(), logger, extension.packageJSON);
-        return downloader.installRuntimeDependencies();
-    } else {
+function execCommand(pythonPath: string, ...args: string[]): Promise<string> {
+    const cmd = [pythonPath, ...args];
+    return new Promise<string>((resolve, reject) => {
+        exec(
+            cmd.join(' '),
+            (error: ExecException | null, stdout: string, stderr: string) => {
+                if (error) {
+                    let errorMessage: string = [
+                        error.name,
+                        error.message,
+                        error.stack,
+                        '',
+                        stderr.toString()
+                    ].join('\n');
+                    reject(errorMessage);
+                } else {
+                    resolve(stdout.toString());
+                }
+            }
+        );
+    });
+}
+
+async function checkSnootyInstall(pythonPath: string | undefined): Promise<boolean> {
+    if (!pythonPath) {
+        return false;
+    }
+    try {
+        await execCommand(pythonPath, '-c', '"import snooty;"');
         return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+async function installSnooty(pythonPath: string | undefined): Promise<void> {
+    if (!pythonPath) {
+        return;
+    }
+    try {
+        await execCommand(pythonPath, '-m', 'pip', 'install', 'snooty');
+    } catch (e) {
+        vscode.window.showErrorMessage(
+            'Could not install snooty. Please run `pip install snooty` to use this ' +
+            'extension, or check your Python path.'
+        );
     }
 }
