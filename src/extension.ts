@@ -33,6 +33,7 @@ export async function activate(context: vscode.ExtensionContext) {
     let executableCommand: string | undefined = vscode.workspace.getConfiguration('snooty')
         .get('languageServerPath', undefined);
     let args: string[] = [];
+    let options: any = {};
     if (executableCommand) {
         args.push('language-server');
     } else {
@@ -58,16 +59,42 @@ export async function activate(context: vscode.ExtensionContext) {
             executableCommand = defaultPythonCommand;
         }
 
-        if (!(await checkSnootyInstall(executableCommand))) {
-            logger.appendLine('snooty package for Python is not installed');
-            var choice = await vscode.window.showInformationMessage('Language server snooty is not installed.', 'Install', 'Not now');
-            if (choice === 'Install') {
-                logger.appendLine('Started to install snooty...');
-                await installSnooty(executableCommand);
-            } else {
-                vscode.window.showWarningMessage('No IntelliSense. Language server snooty is not installed.');
-                logger.appendLine('User decided to exit');
+        const sourceFolder = vscode.workspace.getConfiguration('snooty').get<string>('sourceFolder');
+        if (sourceFolder) {
+            options.cwd = sourceFolder;
+            if (await checkSnootyInstall(executableCommand)) {
+                vscode.window.showErrorMessage('Run `pip uninstall snooty` and then restart VSCode to start debugging.');
                 return;
+            }
+            if (!(await checkDebugPyInstall(executableCommand))) {
+                logger.appendLine('debugpy package for Python is not installed');
+                var choice = await vscode.window.showInformationMessage('Python package debugpy is not installed.', 'Install', 'Not now');
+                if (choice === 'Install') {
+                    logger.appendLine('Started to install debugpy...');
+                    await installDebugPy(executableCommand);
+                } else {
+                    vscode.window.showWarningMessage('Cannot debug. Python package debugpy is not installed.');
+                    logger.appendLine('User decided to exit');
+                    return;
+                }
+            }
+            args.push('-m', 'debugpy', '--listen', '5678');
+            if (vscode.workspace.getConfiguration('snooty').get<boolean>('debugLaunch', false)) {
+                args.push('--wait-for-client');
+            }
+            vscode.window.showInformationMessage('debugpy is at port 5678. Connect and debug.');
+        } else {
+            if (!(await checkSnootyInstall(executableCommand))) {
+                logger.appendLine('snooty package for Python is not installed');
+                var choice = await vscode.window.showInformationMessage('Language server snooty is not installed.', 'Install', 'Not now');
+                if (choice === 'Install') {
+                    logger.appendLine('Started to install snooty...');
+                    await installSnooty(executableCommand);
+                } else {
+                    vscode.window.showWarningMessage('No IntelliSense. Language server snooty is not installed.');
+                    logger.appendLine('User decided to exit');
+                    return;
+                }
             }
         }
         args.push('-m', 'snooty', 'language-server');
@@ -80,7 +107,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
     const run: Executable = {
         args: args,
-        command: executableCommand
+        command: executableCommand,
+        options: options
     };
     const debug: Executable = run;
     const serverOptions: ServerOptions = {
@@ -210,6 +238,32 @@ function execCommand(pythonPath: string, ...args: string[]): Promise<string> {
             }
         );
     });
+}
+
+async function checkDebugPyInstall(pythonPath: string | undefined): Promise<boolean> {
+    if (!pythonPath) {
+        return false;
+    }
+    try {
+        await execCommand(pythonPath, '-c', '"import debugpy;"');
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+async function installDebugPy(pythonPath: string | undefined): Promise<void> {
+    if (!pythonPath) {
+        return;
+    }
+    try {
+        await execCommand(pythonPath, '-m', 'pip', 'install', 'debugpy');
+    } catch (e) {
+        vscode.window.showErrorMessage(
+            'Could not install debugpy. Please run `pip install debugpy` to use this ' +
+            'extension, or check your Python path.'
+        );
+    }
 }
 
 async function checkSnootyInstall(pythonPath: string | undefined): Promise<boolean> {

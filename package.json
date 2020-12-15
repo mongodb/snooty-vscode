@@ -47,6 +47,18 @@
 					"default": null,
 					"description": "Override the path to Snooty. Only required for Snooty developers."
 				},
+				"snooty.sourceFolder": {
+					"scope": "resource",
+					"type": "string",
+					"default": null,
+					"description": "Local source folder of snooty. Used for debugging local language server."
+				},
+				"snooty.debugLaunch": {
+					"scope": "resource",
+					"type": "boolean",
+					"default": false,
+					"description": "Whether to debug from launch."
+				},
 				"snooty.trace.server": {
 					"scope": "window",
 					"type": "string",
