@@ -108,8 +108,8 @@
 		{
 			"description": "Snooty Language Server for macOS (x64)",
 			"platforms": {
-				"x86_64 darwin": "https://github.com/mongodb/snooty-parser/releases/download/v0.8.2/snooty-v0.8.2-darwin_x86_64.zip",
-				"x86_64 linux": "https://github.com/mongodb/snooty-parser/releases/download/v0.8.2/snooty-v0.8.2-linux_x86_64.zip"
+				"x86_64 darwin": "https://github.com/mongodb/snooty-parser/releases/download/v0.9.2/snooty-v0.9.2-darwin_x86_64.zip",
+				"x86_64 linux": "https://github.com/mongodb/snooty-parser/releases/download/v0.9.2/snooty-v0.9.2-linux_x86_64.zip"
 			},
 			"installPath": ".snooty",
 			"installTestPath": ".snooty/snooty/snooty"
@@ -136,8 +136,8 @@
 		"@types/mkdirp": "^1.0.0",
 		"@types/mocha": "^5.2.7",
 		"@types/node": "^8.10.58",
-		"@types/yauzl": "^2.9.1",
 		"@types/vscode": "1.45.1",
+		"@types/yauzl": "^2.9.1",
 		"ts-loader": "^6.2.1",
 		"tslint": "^5.20.0",
 		"typescript": "^3.6.4",
