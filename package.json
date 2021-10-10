@@ -104,6 +104,7 @@
 	"extensionDependencies": [
 		"bungcip.better-toml"
 	],
+	"extensionPack": ["pi-solved.link-checker"],
 	"runtimeDependencies": [
 		{
 			"description": "Snooty Language Server for macOS (x64)",
