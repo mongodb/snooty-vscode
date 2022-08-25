@@ -129,7 +129,7 @@
 		"mkdirp": "^0.5.1",
 		"open": "^6.4.0",
 		"tmp-promise": "^2.0.2",
-		"vsce": "^1.100.2",
+		"vsce": "^2.10.2",
 		"vscode-languageclient": "^5.2.1",
 		"yauzl": "^2.10.0",
 		"yauzl-promise": "^2.1.3"
