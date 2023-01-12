@@ -1,14 +1,12 @@
-import toml
+import tomli
 
-snooty = toml.load("scripts/rstspec.toml")
+with open("scripts/rstspec.toml", "rb") as f:
+    snooty = tomli.load(f)
 
 snippets = []
 
 for directive in snooty["directive"]:
-
     if "example" in snooty["directive"][directive]:
-        print("Working on {}\n\n".format(directive))
-
         # Don't build snippets for devhub-only directives - they're handled elsewhere
         if str(directive).startswith("devhub:"):
             continue
