@@ -3,7 +3,7 @@
 	"description": "Snooty is a next-generation documentation authoring IDE.",
 	"author": "MongoDB",
 	"license": "SEE LICENSE IN LICENSE",
-	"version": "0.10.0",
+	"version": "0.11.0",
 	"icon": "misc/icon.png",
 	"galleryBanner": {
 		"color": "#FFF",
@@ -108,9 +108,9 @@
 		{
 			"description": "Snooty Language Server for macOS (x64)",
 			"platforms": {
-				"x86_64 darwin": "https://github.com/mongodb/snooty-parser/releases/download/v0.13.15/snooty-v0.13.15-darwin_x86_64.zip",
-				"x86_64 linux": "https://github.com/mongodb/snooty-parser/releases/download/v0.13.15/snooty-v0.13.15-linux_x86_64.zip",
-				"arm64 darwin": "https://github.com/mongodb/snooty-parser/releases/download/v0.13.15/snooty-v0.13.15-darwin_x86_64.zip"
+				"x86_64 darwin": "https://github.com/mongodb/snooty-parser/releases/download/v0.14.9/snooty-v0.14.9-darwin_x86_64.zip",
+				"x86_64 linux": "https://github.com/mongodb/snooty-parser/releases/download/v0.14.9/snooty-v0.14.9-linux_x86_64.zip",
+				"arm64 darwin": "https://github.com/mongodb/snooty-parser/releases/download/v0.14.9/snooty-v0.14.9-darwin_x86_64.zip"
 			},
 			"installPath": ".snooty",
 			"installTestPath": ".snooty/snooty/snooty"
