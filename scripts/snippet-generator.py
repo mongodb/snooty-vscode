@@ -1,7 +1,7 @@
-import tomli
+import tomllib
 
 with open("scripts/rstspec.toml", "rb") as f:
-    snooty = tomli.load(f)
+    snooty = tomllib.load(f)
 
 snippets = []
 
