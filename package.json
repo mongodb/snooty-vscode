@@ -102,7 +102,7 @@
 		]
 	},
 	"extensionDependencies": [
-		"bungcip.better-toml"
+		"tamasfe.even-better-toml"
 	],
 	"runtimeDependencies": [
 		{
