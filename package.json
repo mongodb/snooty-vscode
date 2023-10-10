@@ -119,13 +119,13 @@
 	"dependencies": {
 		"@types/mime": "^2.0.1",
 		"@types/yauzl-promise": "^2.1.0",
-		"@vscode/vsce": "^2.21.0",
 		"https-proxy-agent": "^2.2.4",
 		"mime": "^2.4.4",
 		"mkdirp": "^0.5.1",
 		"node-fetch": "^3.3.2",
 		"open": "^6.4.0",
 		"tmp-promise": "^2.0.2",
+		"@vscode/vsce": "^2.21.0",
 		"vscode-languageclient": "^5.2.1",
 		"yauzl": "^2.10.0",
 		"yauzl-promise": "^2.1.3"
