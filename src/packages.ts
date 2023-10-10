@@ -124,7 +124,7 @@ function getNoopStatus(): Status {
 }
 
 function downloadFile(urlString: string, pkg: Package, logger: Logger, status: Status, proxy?: string): Promise<void> {
-    const url = parseUrl(urlString)
+    const url = parseUrl(urlString);
 
     const options: https.RequestOptions = {
         host: url.host,
