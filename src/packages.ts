@@ -5,6 +5,7 @@
 
 import * as fs from 'fs';
 import { promisify }  from 'util';
+import fetch from 'node-fetch';
 import * as https from 'https';
 import * as mkdirp from 'mkdirp';
 import * as path from 'path';
@@ -60,14 +61,7 @@ export class PackageManager {
         const packages = this.allPackages;
         logger.appendLine(`packages: ${JSON.stringify(packages, null, 2)}`);
         for (const pkg of packages) {
-            logger.appendLine(`packageTestPathExists: ${await getPackageTestPath(pkg)}`);
-            const exists = await doesPackageTestPathExist(pkg);
-            logger.appendLine(`exists: ${exists}`)
-            if (!exists) {
-                return this.downloadPackage(pkg, logger, status, proxy);
-            } else {
-                logger.appendLine(`Skipping package '${pkg.description}' (already downloaded).`);
-            }
+            return this.downloadPackage(pkg, logger, status, proxy);
         }
     }
 
@@ -78,13 +72,11 @@ export class PackageManager {
     }
 
     private async downloadPackage(pkg: Package, logger: Logger, status: Status, proxy?: string): Promise<void> {
-        const platformKey = [this.platformInfo.architecture, this.platformInfo.platform].join(" ");
-        const url = pkg.platforms[platformKey];
-
-
-        if (!url) {
-            throw new PackageError(`Unsupported platform: '${platformKey}'`, pkg);
+        const platform = this.platformInfo.platform;
+        if (!['darwin', 'linux'].includes(platform)) {
+            throw new PackageError(`Unsupported platform: '${platform}'`, pkg);
         }
+        const latestSnootyReleaseUrl = await getLatestParserUrl(platform, logger);
 
         logger.append(`Downloading package '${pkg.description}' `);
         status.setMessage("$(cloud-download) Downloading packages");
@@ -94,12 +86,26 @@ export class PackageManager {
 
         pkg.tmpFile = tmpResult;
 
-        const result = await downloadFile(url, pkg, logger, status, proxy);
+        const result = await downloadFile(latestSnootyReleaseUrl, pkg, logger, status, proxy);
         logger.appendLine(' Done!');
 
         return result;
     }
 }
+
+async function getLatestParserUrl (platform: string, logger: Logger) {
+    const githubUrl = `https://github.com/mongodb/snooty-parser/releases/latest`;
+    const response = await fetch(githubUrl, { headers: { Accept: 'application/json' } });
+    const json = await response.json() as { [k:string]: string };
+
+    let latestTag = json?.tag_name;
+    if (!latestTag) {
+        logger.appendLine('Error accessing newest snooty-parser version.');
+        latestTag = 'v0.14.10';
+    }
+    const latestParserReleaseUrl = `https://github.com/mongodb/snooty-parser/releases/download/${latestTag}/snooty-${latestTag}-${platform}_x86_64.zip`;
+    return latestParserReleaseUrl;
+};
 
 function getBaseInstallPath(pkg: Package): string {
     let basePath = util.getExtensionPath();
@@ -118,7 +124,7 @@ function getNoopStatus(): Status {
 }
 
 function downloadFile(urlString: string, pkg: Package, logger: Logger, status: Status, proxy?: string): Promise<void> {
-    const url = parseUrl(urlString);
+    const url = parseUrl(urlString)
 
     const options: https.RequestOptions = {
         host: url.host,
@@ -139,7 +145,6 @@ function downloadFile(urlString: string, pkg: Package, logger: Logger, status: S
                 if (newLocation) {
                     return resolve(downloadFile(newLocation, pkg, logger, status, proxy));
                 }
-
                 reject(new PackageError("Error getting download location", pkg));
             }
 

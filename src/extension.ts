@@ -168,11 +168,6 @@ export function deactivate() {
 }
 
 async function ensureRuntimeDependencies(extension: vscode.Extension<object>, logger: Logger): Promise<boolean> {
-    const exists = await util.installFileExists(util.InstallFileType.Lock);
-    if (!exists) {
-        const downloader = new ExtensionDownloader(getOutputChannel(), logger, extension.packageJSON);
-        return downloader.installRuntimeDependencies();
-    } else {
-        return true;
-    }
+    const downloader = new ExtensionDownloader(getOutputChannel(), logger, extension.packageJSON);
+    return downloader.installRuntimeDependencies();
 }
