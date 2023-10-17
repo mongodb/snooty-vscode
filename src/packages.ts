@@ -73,7 +73,7 @@ export class PackageManager {
     }
 
     private async downloadPackage(pkg: Package, logger: Logger, status: Status, proxy?: string): Promise<void> {
-        const platform = this.platformInfo.platform;
+        const { platform } = this.platformInfo;
         if (!['darwin', 'linux'].includes(platform)) {
             throw new PackageError(`Unsupported platform: '${platform}'`, pkg);
         }
@@ -156,6 +156,7 @@ function downloadFile(urlString: string, pkg: Package, logger: Logger, status: S
                 if (newLocation) {
                     return resolve(downloadFile(newLocation, pkg, logger, status, proxy));
                 }
+
                 reject(new PackageError("Error getting download location", pkg));
             }
 
