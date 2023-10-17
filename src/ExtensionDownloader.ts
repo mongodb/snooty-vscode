@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import * as util from './common';
 import { Logger } from './logger';
 import { PackageManager, Status, PackageError } from './packages';
@@ -52,6 +54,18 @@ export class ExtensionDownloader
             this.logger.appendLine(`Platform: ${platformInfo.toString()}`);
             this.logger.appendLine();
 
+            installationStage = 'ensureLatestParserVersion';
+            await packageManager.getLatestParserUrl(platformInfo.platform, this.logger);
+            const installedParserVersion = readParserVersionFromFile(this.logger);
+
+            const fileExists = installedParserVersion === packageManager.parserVersion;
+            if (fileExists) {
+                installationStage = 'completeSuccess';
+                success = true;
+                return success;
+            }
+            this.logger.appendLine('New snooty-parser version available.')
+
             installationStage = 'downloadPackages';
 
             const config = vscode.workspace.getConfiguration();
@@ -65,6 +79,9 @@ export class ExtensionDownloader
 
             installationStage = 'touchLockFile';
             await util.touchInstallFile(util.InstallFileType.Lock);
+
+            installationStage = 'writeParserVersionToTxtFile';
+            packageManager.writeParserVersionToFile();
 
             installationStage = 'completeSuccess';
             success = true;
@@ -101,5 +118,18 @@ export class ExtensionDownloader
         catch (err) { }
 
         return success;
+    }
+}
+
+function readParserVersionFromFile(logger: Logger) {
+    const basePath = util.getExtensionPath();
+    const absolutePath = path.resolve(basePath, 'parser-version.txt');
+
+    try {
+        const data = fs.readFileSync(absolutePath, { encoding: 'utf8' });
+        return data;
+    } catch (error) {
+        logger.appendLine('No parser-version.txt file found.')
+        return '';
     }
 }

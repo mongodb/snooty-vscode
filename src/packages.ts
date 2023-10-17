@@ -46,6 +46,7 @@ export class PackageError extends Error {
 
 export class PackageManager {
     private allPackages: Package[] = []
+    public parserVersion: string = ''
 
     public constructor(
         private platformInfo: PlatformInformation,
@@ -76,7 +77,7 @@ export class PackageManager {
         if (!['darwin', 'linux'].includes(platform)) {
             throw new PackageError(`Unsupported platform: '${platform}'`, pkg);
         }
-        const latestSnootyReleaseUrl = await getLatestParserUrl(platform, logger);
+        const latestSnootyReleaseUrl = await this.getLatestParserUrl(platform, logger);
 
         logger.append(`Downloading package '${pkg.description}' `);
         status.setMessage("$(cloud-download) Downloading packages");
@@ -91,21 +92,31 @@ export class PackageManager {
 
         return result;
     }
-}
 
-async function getLatestParserUrl (platform: string, logger: Logger) {
-    const githubUrl = `https://github.com/mongodb/snooty-parser/releases/latest`;
-    const response = await fetch(githubUrl, { headers: { Accept: 'application/json' } });
-    const json = await response.json() as { [k:string]: string };
+    public async getLatestParserUrl(platform: string, logger: Logger) {
+        const githubUrl = `https://github.com/mongodb/snooty-parser/releases/latest`;
+        const response = await fetch(githubUrl, { headers: { Accept: 'application/json' } });
+        const json = await response.json() as { [k:string]: string };
+    
+        let latestTag = json?.tag_name;
+        if (!latestTag) {
+            logger.appendLine('Error accessing newest snooty-parser version.');
+            latestTag = 'v0.14.10';
+        }
+        logger.appendLine(`Setting latest snooty-parser version: '${latestTag}' `);
+        this.parserVersion = latestTag;
 
-    let latestTag = json?.tag_name;
-    if (!latestTag) {
-        logger.appendLine('Error accessing newest snooty-parser version.');
-        latestTag = 'v0.14.10';
+        const latestParserReleaseUrl = `https://github.com/mongodb/snooty-parser/releases/download/${latestTag}/snooty-${latestTag}-${platform}_x86_64.zip`;
+        return latestParserReleaseUrl;
+    }; 
+
+    public writeParserVersionToFile() {
+        const basePath = util.getExtensionPath();
+        const absolutePath = path.resolve(basePath, 'parser-version.txt');
+
+        fs.writeFileSync(absolutePath, this.parserVersion);
     }
-    const latestParserReleaseUrl = `https://github.com/mongodb/snooty-parser/releases/download/${latestTag}/snooty-${latestTag}-${platform}_x86_64.zip`;
-    return latestParserReleaseUrl;
-};
+}
 
 function getBaseInstallPath(pkg: Package): string {
     let basePath = util.getExtensionPath();
