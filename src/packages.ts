@@ -16,6 +16,7 @@ import * as util from './common';
 import { Logger } from './logger';
 import { PlatformInformation } from './platform';
 import { getProxyAgent } from './proxy';
+import { readParserVersionFromFile } from './ExtensionDownloader';
 
 // Unix User Executable bitmask
 const S_IXUSR = 0o0100;
@@ -100,10 +101,14 @@ export class PackageManager {
     
         let latestTag = json?.tag_name;
         if (!latestTag) {
+            // If fetch did not work, assume offline and use currently downloaded snooty-parser
+            latestTag = readParserVersionFromFile(logger);
             logger.appendLine('Error accessing newest snooty-parser version.');
-            latestTag = 'v0.14.10';
+            if (!latestTag) {
+                latestTag = 'v0.15.0';
+            }
         }
-        logger.appendLine(`Setting latest snooty-parser version: '${latestTag}' `);
+        logger.appendLine(`Setting snooty-parser version: '${latestTag}'`);
         this.parserVersion = latestTag;
 
         const latestParserReleaseUrl = `https://github.com/mongodb/snooty-parser/releases/download/${latestTag}/snooty-${latestTag}-${platform}_x86_64.zip`;

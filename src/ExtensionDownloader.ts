@@ -61,6 +61,7 @@ export class ExtensionDownloader
             const fileExists = installedParserVersion === packageManager.parserVersion;
             if (fileExists) {
                 installationStage = 'completeSuccess';
+                this.logger.appendLine('Finished!');
                 success = true;
                 return success;
             }
@@ -121,7 +122,7 @@ export class ExtensionDownloader
     }
 }
 
-function readParserVersionFromFile(logger: Logger) {
+export function readParserVersionFromFile(logger: Logger) {
     const basePath = util.getExtensionPath();
     const absolutePath = path.resolve(basePath, 'parser-version.txt');
 
