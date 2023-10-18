@@ -5,6 +5,7 @@
 
 import * as fs from 'fs';
 import { promisify }  from 'util';
+import fetch from 'node-fetch';
 import * as https from 'https';
 import * as mkdirp from 'mkdirp';
 import * as path from 'path';
@@ -15,6 +16,7 @@ import * as util from './common';
 import { Logger } from './logger';
 import { PlatformInformation } from './platform';
 import { getProxyAgent } from './proxy';
+import { readParserVersionFromFile } from './ExtensionDownloader';
 
 // Unix User Executable bitmask
 const S_IXUSR = 0o0100;
@@ -45,6 +47,7 @@ export class PackageError extends Error {
 
 export class PackageManager {
     private allPackages: Package[] = []
+    public parserVersion: string = ''
 
     public constructor(
         private platformInfo: PlatformInformation,
@@ -60,14 +63,7 @@ export class PackageManager {
         const packages = this.allPackages;
         logger.appendLine(`packages: ${JSON.stringify(packages, null, 2)}`);
         for (const pkg of packages) {
-            logger.appendLine(`packageTestPathExists: ${await getPackageTestPath(pkg)}`);
-            const exists = await doesPackageTestPathExist(pkg);
-            logger.appendLine(`exists: ${exists}`)
-            if (!exists) {
-                return this.downloadPackage(pkg, logger, status, proxy);
-            } else {
-                logger.appendLine(`Skipping package '${pkg.description}' (already downloaded).`);
-            }
+            return this.downloadPackage(pkg, logger, status, proxy);
         }
     }
 
@@ -78,13 +74,11 @@ export class PackageManager {
     }
 
     private async downloadPackage(pkg: Package, logger: Logger, status: Status, proxy?: string): Promise<void> {
-        const platformKey = [this.platformInfo.architecture, this.platformInfo.platform].join(" ");
-        const url = pkg.platforms[platformKey];
-
-
-        if (!url) {
-            throw new PackageError(`Unsupported platform: '${platformKey}'`, pkg);
+        const { platform } = this.platformInfo;
+        if (!['darwin', 'linux'].includes(platform)) {
+            throw new PackageError(`Unsupported platform: '${platform}'`, pkg);
         }
+        const latestSnootyReleaseUrl = await this.getLatestParserUrl(platform, logger);
 
         logger.append(`Downloading package '${pkg.description}' `);
         status.setMessage("$(cloud-download) Downloading packages");
@@ -94,10 +88,38 @@ export class PackageManager {
 
         pkg.tmpFile = tmpResult;
 
-        const result = await downloadFile(url, pkg, logger, status, proxy);
+        const result = await downloadFile(latestSnootyReleaseUrl, pkg, logger, status, proxy);
         logger.appendLine(' Done!');
 
         return result;
+    }
+
+    public async getLatestParserUrl(platform: string, logger: Logger) {
+        const githubUrl = `https://github.com/mongodb/snooty-parser/releases/latest`;
+        const response = await fetch(githubUrl, { headers: { Accept: 'application/json' } });
+        const json = await response.json() as { [k:string]: string };
+    
+        let latestTag = json?.tag_name;
+        if (!latestTag) {
+            // If fetch did not work, assume offline and use currently downloaded snooty-parser
+            latestTag = readParserVersionFromFile(logger);
+            logger.appendLine('Error accessing newest snooty-parser version.');
+            if (!latestTag) {
+                latestTag = 'v0.15.0';
+            }
+        }
+        logger.appendLine(`Setting snooty-parser version: '${latestTag}'`);
+        this.parserVersion = latestTag;
+
+        const latestParserReleaseUrl = `https://github.com/mongodb/snooty-parser/releases/download/${latestTag}/snooty-${latestTag}-${platform}_x86_64.zip`;
+        return latestParserReleaseUrl;
+    }; 
+
+    public writeParserVersionToFile() {
+        const basePath = util.getExtensionPath();
+        const absolutePath = path.resolve(basePath, 'parser-version.txt');
+
+        fs.writeFileSync(absolutePath, this.parserVersion);
     }
 }
 

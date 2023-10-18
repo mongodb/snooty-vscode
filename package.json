@@ -107,11 +107,6 @@
 	"runtimeDependencies": [
 		{
 			"description": "Snooty Language Server for macOS (x64)",
-			"platforms": {
-				"x86_64 darwin": "https://github.com/mongodb/snooty-parser/releases/download/v0.14.9/snooty-v0.14.9-darwin_x86_64.zip",
-				"x86_64 linux": "https://github.com/mongodb/snooty-parser/releases/download/v0.14.9/snooty-v0.14.9-linux_x86_64.zip",
-				"arm64 darwin": "https://github.com/mongodb/snooty-parser/releases/download/v0.14.9/snooty-v0.14.9-darwin_x86_64.zip"
-			},
 			"installPath": ".snooty",
 			"installTestPath": ".snooty/snooty/snooty"
 		}
@@ -127,6 +122,7 @@
 		"https-proxy-agent": "^2.2.4",
 		"mime": "^2.4.4",
 		"mkdirp": "^0.5.1",
+		"node-fetch": "^3.3.2",
 		"open": "^6.4.0",
 		"tmp-promise": "^2.0.2",
 		"@vscode/vsce": "^2.21.0",
