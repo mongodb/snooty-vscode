@@ -31,10 +31,6 @@ export async function activate(context: vscode.ExtensionContext) {
   util.setExtensionPath(context.extensionPath);
   logger = new Logger((text) => getOutputChannel().append(text));
 
-  console.log("HELLO HELLO HELLO,");
-
-  logger.appendLine("HELLO HELLO HELLO FROM LOGGER");
-
   const extension = vscode.extensions.all.find(
     (ext) => ext.extensionUri === context.extensionUri
   );
@@ -63,7 +59,6 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   }
 
-  logger.appendLine("MADE IT TO EXECUTABLE");
   if (!executableCommand) {
     logger.append("Could not find executable");
     return;
@@ -79,7 +74,6 @@ export async function activate(context: vscode.ExtensionContext) {
     debug: debug,
   };
 
-  logger.appendLine("MADE IT TO DOCUMENT SELECTOR");
   // client extensions configure their server
   const documentSelector = [
     { language: "plaintext", scheme: "file" },
@@ -100,8 +94,6 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   };
 
-  logger.appendLine("MADE IT TO CLIENT");
-
   const client = new LanguageClient(
     "Snooty Language Client",
     serverOptions,
@@ -120,18 +112,15 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(client.start());
   context.subscriptions.push(restartServer);
 
-  logger.appendLine("ADDED SOME STUFF AND STARTED");
-
   // Register custom command to allow includes, literalincludes, and figures to be clickable
   //let hoverFile: string;
   const clickInclude: vscode.Disposable = vscode.commands.registerCommand(
     "snooty.clickInclude",
     async (args) => {
       const hoverFile = args.hoverFile;
-      logger?.append(`HOVERFILE ${hoverFile}`);
+
       // Send request to server (snooty-parser)
       const type = mime.getType(hoverFile);
-      logger?.append(`TYPE ${type}`);
 
       if (type == null || !type.includes("image")) {
         const textDoc = await vscode.workspace.openTextDocument(hoverFile);
@@ -143,7 +132,6 @@ export async function activate(context: vscode.ExtensionContext) {
   );
   context.subscriptions.push(clickInclude);
 
-  logger.appendLine("CLICK INCLUDE HAS BEEN PUSHED");
   // Shows clickable link to file after hovering over it
   vscode.languages.registerHoverProvider(
     documentSelector,
@@ -163,7 +151,6 @@ export async function activate(context: vscode.ExtensionContext) {
         if (wordRange != undefined) {
           // Get text at that range
           let word = _document.getText(wordRange);
-          logger?.appendLine(`WORD ${word}`);
 
           // If there's no extension, assume .txt.
           // Ideally the parser could figure this out for us, but
@@ -171,8 +158,6 @@ export async function activate(context: vscode.ExtensionContext) {
           if (!word.includes(".")) {
             word = word + ".txt";
           }
-
-          logger?.appendLine(`WORDINCLUDES ${word}`);
 
           // Request hover information using the snooty-parser server
           let request = async () => {
@@ -187,29 +172,21 @@ export async function activate(context: vscode.ExtensionContext) {
               }
             );
 
-            logger?.appendLine(`AST IG ${file}`);
-            //const command = vscode.Uri.parse(file);
-            //const command = vscode.Uri.parse(`command:snooty.clickInclude`);
             const args = [{ hoverFile: file }];
             const command = vscode.Uri.parse(
               `command:snooty.clickInclude?${encodeURIComponent(
                 JSON.stringify(args)
               )}`
             );
-            logger?.appendLine(`cCOOMAND ${String(command)}`);
 
             // Clean up absolute path for better UX. str.match() was not working with regex but can look into later
             let workspaceFolder = vscode.workspace.name;
             if (!workspaceFolder) {
-              logger?.appendLine(`NO WORKSPACE FOLDER, RETURN`);
               return;
             }
-            // TODO SOMETHING GOING ON HERE
+
             let folderIndex = file.search(workspaceFolder);
 
-            logger?.appendLine(
-              `WORKPACE FOLDER ${workspaceFolder} \n FOLDER INDEX ${folderIndex} \n`
-            );
             let hoverPathRelative = file.slice(folderIndex);
 
             logger?.appendLine(`hoverPathRelative ${hoverPathRelative}`);
@@ -219,7 +196,6 @@ export async function activate(context: vscode.ExtensionContext) {
             );
             contents.isTrusted = true; // Enables commands to be used
 
-            logger?.appendLine(`OUR VALUE [${hoverPathRelative}](${command})`);
             return new vscode.Hover(contents, wordRange);
           };
 
