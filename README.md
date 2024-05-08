@@ -24,7 +24,9 @@ It also includes an End-to-End test.
 
 ## How to run locally in development
 
-To test out a local build of the Snooty VSCode Extension, run the command `vsce package` at the root. Once successfully compiled, open a Docs Content repo (e.g. `cloud-docs`, `docs-landing`) in a VSCode window and navigate to the `Extensions` panel from the lefthand `Extensions` sidebar button. Click the button at the top of the panel with the ellipses (...) and select `Install from VSIX`. Choose the newly compiled file from your local `snooty-vscode` repo named in the format of `snooty-<version>.vsix`. This should enable your local branch as the extension utilized on your local machine's VSCode.
+To test out a local build of the Snooty VSCode Extension, you first need to run `npm install -g @vscode/vsce` to install the `vsce` package globally. Then, follow the instructions in [`HACKING.md`](https://github.com/mongodb/snooty-vscode/blob/main/HACKING.md#setting-up-parser-communication) to allow the extension to communicate with the parser locally.
+
+Run the command `vsce package` at the root of this directory to compile the project. Once successfully compiled, open a Docs Content repo (e.g. `cloud-docs`, `docs-landing`) in a VSCode window and navigate to the `Extensions` panel from the lefthand `Extensions` sidebar button. Click the button at the top of the panel with the ellipses (...) and select `Install from VSIX`. Choose the newly compiled file from your local `snooty-vscode` repo named in the format of `snooty-<version>.vsix`. This should enable your local branch as the extension utilized on your local machine's VSCode.
 
 ## Releasing
 
