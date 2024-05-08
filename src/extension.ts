@@ -113,7 +113,6 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(restartServer);
 
   // Register custom command to allow includes, literalincludes, and figures to be clickable
-  //let hoverFile: string;
   const clickInclude: vscode.Disposable = vscode.commands.registerCommand(
     "snooty.clickInclude",
     async (args) => {
@@ -189,8 +188,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
             let hoverPathRelative = file.slice(folderIndex);
 
-            logger?.appendLine(`hoverPathRelative ${hoverPathRelative}`);
-
             contents = new vscode.MarkdownString(
               `[${hoverPathRelative}](${command})`
             );
@@ -204,8 +201,6 @@ export async function activate(context: vscode.ExtensionContext) {
       }
     })()
   );
-
-  logger.append("LANGUAGES RESGISTER");
 
   vscode.languages.registerDocumentLinkProvider(
     documentSelector,
