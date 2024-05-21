@@ -6,13 +6,17 @@ If you're working on changes to the Snooty VS Code extension, it will be useful 
 
 Communication between the Snooty extension and the parser are performed via remote procedure calls (RPC) found in the parser's language server. To allow the VS Code extension to communicate to your local repo of the parser, do the following:
 
-1. Press `Cmd` + `Shift` + `P` to open a list of commands.
-2. Run `Preferences: Open Settings (JSON)` to open `settings.json` for VS Code.
+1. Navigate to your copy of `snooty-parser`.
+2. Run the following command: `echo $(poetry env info -p)/bin/snooty`. This gives you the path for the parser's language server. Copy the path returned by this command.
+3. Open your local `snooty-vscode` copy in VSCode.
+4. Press `Cmd` + `Shift` + `P` to open a list of commands.
+5. Run `Preferences: Open Settings (JSON)` to open `settings.json` for VS Code.
 3. Add the following in `settings.json`:
 
 ```
-"snooty.languageServerPath": "/usr/local/Cellar/python/3.7.3/Frameworks/Python.framework/Versions/3.7/bin/snooty",
+"snooty.languageServerPath": "<COPIED_PATH>",
 ```
+where `<COPIED_PATH>` is the path you copied in Step 2.
 
 ## Making Client Requests
 
@@ -26,23 +30,3 @@ client.sendRequest({parameter: argument}, (returnValue) => {
 ## Running the Extension Locally
 
 Press `F5` to run the extension locally. This should open up an Extension Development Host instance of VS Code. Open any docs repo that has a `snooty.toml` file (and pull any remote assets using `make` if it hasn't been done so already).
-
-## Snooty Submodule
-
-Before working on Snooty Preview, it is important to set up the submodule for the [Snooty frontend components](https://github.com/mongodb/snooty).
-
-To set up, run:
-```
-make frontend
-```
-
-## Snooty Preview
-
-Snooty Preview is a feature that allows the user to preview a single page as it would look like on the documentation site, without having to formally build the entire site. Snooty Frontend is used as a submodule to make use of the frontend components needed to render the page. The parser is responsible for passing along the abstract syntax tree (AST) and other data needed by the frontend components.
-
-Snooty Preview can be broken down into the following files:
-
-* `preview.ts`: Contains tasks and commands needed for Snooty Preview's workflow.
-* `webview.ts`: Handles creating a webview panel for the preview page.
-
-More information on Snooty Preview can be found [here](https://github.com/mongodb/snooty/blob/master/HACKING.md#vs-code-extension).
