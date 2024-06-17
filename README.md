@@ -22,7 +22,12 @@ It also includes an End-to-End test.
 └── package.json // The extension manifest.
 ```
 
-## How to run locally in development
+## Running the Extension Locally
+
+Press `F5` to run the extension locally. This should open up an Extension Development Host instance of VS Code. Open any docs repo that has a `snooty.toml` file (and pull any remote assets using `make` if it hasn't been done so already).
+
+
+## Testing the Packaging Process
 
 To test out a local build of the Snooty VSCode Extension, run the command `vsce package` at the root. Once successfully compiled, open a Docs Content repo (e.g. `cloud-docs`, `docs-landing`) in a VSCode window and navigate to the `Extensions` panel from the lefthand `Extensions` sidebar button. Click the button at the top of the panel with the ellipses (...) and select `Install from VSIX`. Choose the newly compiled file from your local `snooty-vscode` repo named in the format of `snooty-<version>.vsix`. This should enable your local branch as the extension utilized on your local machine's VSCode.
 
