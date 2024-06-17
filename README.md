@@ -22,7 +22,12 @@ It also includes an End-to-End test.
 └── package.json // The extension manifest.
 ```
 
-## How to run locally in development
+## Running the Extension Locally
+
+Press `F5` to run the extension locally. This should open up an Extension Development Host instance of VS Code. Open any docs repo that has a `snooty.toml` file (and pull any remote assets using `make` if it hasn't been done so already).
+
+
+## Testing the Packaging Process
 
 To test out a local build of the Snooty VSCode Extension, you first need to run `npm install -g @vscode/vsce` to install the `vsce` package globally. Then, follow the instructions in [`HACKING.md`](https://github.com/mongodb/snooty-vscode/blob/main/HACKING.md#setting-up-parser-communication) to allow the extension to communicate with the parser locally.
 
