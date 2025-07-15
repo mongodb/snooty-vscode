@@ -151,11 +151,11 @@ export async function activate(context: vscode.ExtensionContext) {
           // Get text at that range
           let word = _document.getText(wordRange);
 
-          // If there's no extension, assume .txt.
+          // If there's no extension, assume .rst.
           // Ideally the parser could figure this out for us, but
           // that's an issue for another time?
           if (!word.includes(".")) {
-            word = word + ".txt";
+            word = word + ".rst";
           }
 
           // Request hover information using the snooty-parser server
